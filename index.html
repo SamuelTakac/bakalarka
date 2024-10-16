@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jazyk čísel a pravdivostných hodnôt</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <h1>Jazyk čísel a pravdivostných hodnôt</h1>
+    <div style="display: flex; align-items: center;">
+        <input type="text" id="expressionInput" placeholder="Zadaj výraz (napr. (if (iszero (pred (succ 0))) then true else false))" />
+        
+        <label style="display: flex; align-items: center; margin-left: 10px;">
+            <input type="checkbox" id="typingCheckbox" style="margin-right: 5px;" /> Typovanie
+        </label>
+    
+        <select id="typeSelect" style="display: none; margin-left: 10px;">
+            <option value="Nat">Nat</option>
+            <option value="Bool">Bool</option>
+        </select>
+    </div>
+    <button id="drawTree">Vypracuj</button>
+    <div id="visualization"></div>
+    <div id="visualization2"></div>
+    <div id="size"></div>
+    <div id="constants"></div>
+    <div id="purposeOfTerm"></div>
+    <script src="script.js"></script>
+</body>
+</html>

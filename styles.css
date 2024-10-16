@@ -1,0 +1,93 @@
+body {
+    font-family: Arial, sans-serif;
+    background-color: #f4f4f4;
+    margin: 0;
+    padding: 20px;
+}
+
+#expressionInput {
+    width: 60%;
+    padding: 10px;
+    margin-bottom: 10px;
+    font-size: 1.2em;
+}
+
+#typingCheckbox {
+    margin-left: 10px;
+    padding: 10px;
+    margin-bottom: 10px;
+    align-self: flex-start;
+}
+
+#typeSelect {
+    padding: 5px;
+}
+
+h1 {
+    text-align: center;
+}
+
+button {
+    padding: 10px 15px;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    width: 61%;
+}
+
+button:hover {
+    background-color: #0056b3;
+}
+
+#visualization, #visualization2 {
+    border: 1px solid #ccc;
+    padding: 10px;
+    border-radius: 5px;
+    background: white;
+    margin-top: 20px;
+}
+
+
+.node h3 {
+    margin: 0;
+}
+
+.node {
+    border: 1px solid #ccc; /* Optional styling for nodes */
+    padding: 10px;
+    margin: 10px;
+    display: flex; /* Make node use flexbox */
+    flex-direction: column; /* Stack content vertically */
+    justify-content: flex-end; /* Align content to the bottom */
+    text-align: center; /* Center the text */
+    position: relative; /* Required for absolute positioning of children */
+}
+
+.children {
+    display: flex; /* Use flexbox to align children horizontally */
+    justify-content: center; /* Center the children horizontally */
+    margin-bottom: 5px;
+}
+
+.children .node {
+    margin: 0 10px; /* Add margin between sibling nodes */
+    position: relative; /* Relative positioning for child nodes */
+}
+
+table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 20px 0;
+    font-size: 1.2em;
+    text-align: left;
+    background-color: white;
+}
+th, td {
+    padding: 10px;
+    border: 1px solid #ddd;
+}
+th {
+    background-color: white;
+}
