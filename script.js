@@ -594,7 +594,6 @@ function calculateDepth(node, depth = 0, depth_output = []) {
 function evaluateExpression(expression) {
     let steps = [];
     let currentExpression = expression;
-
     function evaluateStep(expr) {
         expr = removeUnnecessaryParentheses(expr); // Apply before each evaluation step
     
@@ -636,13 +635,12 @@ function evaluateExpression(expression) {
             }
     
             let replacement = ifPart === 'true' ? thenPart : elsePart;
-    
             // Remove unnecessary parentheses after the replacement
-            let replacedExpr = expr.slice(0, ifIdx) + replacement + expr.slice(expr.indexOf(elsePart) + elsePart.length);
+            let replacedExpr = expr.slice(0, ifIdx) + replacement + expr.slice(expr.indexOf(elsePart-1),elsePart.length);
             replacedExpr = removeUnnecessaryParentheses(replacedExpr);
             // Remove any unnecessary outer parentheses that may have remained
             return removeUnnecessaryParentheses2(replacedExpr);
-        }
+        }     
         if (expr.match(/pred \( succ \((.*?)\) \)/)) {
             return expr.replace(/pred \( succ \((.*?)\) \)/, '$1');
         }
@@ -713,7 +711,8 @@ document.getElementById("drawTree").addEventListener("click", () => {
             first = true;
             const depth_output = calculateDepth(treeDataNew);
             depthContainer.innerHTML = `<table><tr><th>Kalkulácia hĺbky</th></tr>${depth_output.join("")}</table>`;
-
+            start;
+            start_i = 0;
             evaluateExpression(tokenize(start));
         } catch (error) {
             alert("Please enter a valid expression!!!!");
