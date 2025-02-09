@@ -542,7 +542,7 @@ function updateDepth(node, index, depths, closed, depth, depth_output, node2, no
                 depth_output.push(`<tr><td>= max(${firstDepth}, depth(${node.type})${depths[1] !== 0 ? ' + ' + depths[1] : ''}, ${thirdDepth})${depth !== 0 ? ' + ' + depth : ''}</td></tr>`);
             } else {
                 let firstDepth = updateDepth(node2, 0, depths, closed);
-                let secondDepth = updateDepth(tnode3, 1, depths, closed);
+                let secondDepth = updateDepth(node3, 1, depths, closed);
                 depth_output.push(`<tr><td>= max(${firstDepth}, ${secondDepth}, depth(${node.type})${depths[2] !== 0 ? ' + ' + depths[2] : ''})${depth !== 0 ? ' + ' + depth : ''}</td></tr>`);
             }
         }
@@ -709,7 +709,7 @@ document.getElementById("drawTree").addEventListener("click", () => {
 
     if (expression) {
         try {
-            visualizationContainer.innerHTML = "";
+             visualizationContainer.innerHTML = "";
             const tokenizedExpression = tokenize(expression);
             if (document.getElementById("typingCheckbox").checked) {
                 const expectedType = document.getElementById("typeSelect").value;
