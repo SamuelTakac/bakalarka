@@ -584,6 +584,10 @@ function calculateDepth(node, depth = 0, depth_output = []) {
             break;
         }
     }
+    const lastEntry = depth_output[depth_output.length - 1];
+    if (lastEntry.includes("= depth(")) {
+        depth_output.push(`<tr><td>= ${depth}</td></tr>\n`);
+    }
     return depth_output;
 }
 
