@@ -431,10 +431,9 @@ function removeUnnecessaryParentheses2(expr) {
 let condition_nodes = [];
 let first = true;
 function calculateConditionalDepth(node_condition, node_then, node_else, depths, closed, depth, depth_output) {
-    let firstDepth, secondDepth, thirdDepth;
-    firstDepth = updateDepth(node_condition, 0, depths, closed);
-    secondDepth = updateDepth(node_then, 1, depths, closed);
-    thirdDepth = updateDepth(node_else, 2, depths, closed);
+    let firstDepth = updateDepth(node_condition, 0, depths, closed, depth, depth_output, node_then, node_else);
+    let secondDepth = updateDepth(node_then, 1, depths, closed, depth, depth_output, node_condition, node_else);
+    let thirdDepth = updateDepth(node_else, 2, depths, closed, depth, depth_output, node_condition,node_then);
 
     depth_output.push(`<tr><td>= max(${firstDepth}, ${secondDepth}, ${thirdDepth})${depth !== 0 ? ' + ' + depth : ''}</td></tr>`);
 
@@ -484,53 +483,69 @@ function calculateConditionalDepth(node_condition, node_then, node_else, depths,
             depth_output.push(first ? `<tr style='color: red'><td>= ${biggest}</td></tr>` : `<tr><td>= ${biggest}</td></tr>`);
         }        
 
-        if (first) {
+        if (first && condition_nodes) {
             first = false;
             const colors = ["blue", "green", "purple", "orange", "brown", "pink", "teal", "cyan", "lime"]; // Expand if needed
             const typeColors = {}; // Store assigned colors for each unique type
             let colorIndex = 0;
-
-            // Collect all unique conditionNode.type values first
-            const conditionTypes = new Set();
 
             for (let conditionNode of condition_nodes) {
                 if (!typeColors[conditionNode.type]) {
                     typeColors[conditionNode.type] = colors[colorIndex % colors.length];
                     colorIndex++;
                 }
-                conditionTypes.add(conditionNode.type);
             }
 
-            // Modify depth_output[0] only once, applying **all** colors
-            let firstLine = depth_output[0]; // Keep original first line
-            for (let type of conditionTypes) {
-                const color = typeColors[type];
-                if (firstLine.includes(`${type}`)) {
-                    firstLine = firstLine.replace(`${type}`,`<span style="color:${color}">${type}</span>`);
+            // Find the last occurrence of each type and apply coloring
+            let lastIndices = {}; // Store last index of each type
+
+            for (let i = depth_output.length - 1; i >= 0; i--) {
+                for (let conditionNode of condition_nodes) {
+                    let type = conditionNode.type;
+                    if (!lastIndices[type] && depth_output[i].includes(type)) {
+                        lastIndices[type] = i; // Store the last index where the type appears
+                    }
                 }
             }
-            depth_output[0] = firstLine; // Update first line after all replacements
+            for (let [type, index] of Object.entries(lastIndices)) {
+                let color = typeColors[type];
+                let targetLine = depth_output[index];
+                targetLine = targetLine.replace(`${type}`, `<span style="color:${color}">${type}</span>`);
+                depth_output[index] = targetLine;
+            }       
 
             // Process each conditionNode as before
             for (let conditionNode of condition_nodes) {
                 depth_output.push(`<tr><td> </td></tr>`); 
-                const node_condition = conditionNode.condition;
-                const node_then = conditionNode.then;
-                const node_else = conditionNode.else;
             
                 // Push the depth with color-coded condition type
                 depth_output.push(`<tr><td>depth(<span style="color:${typeColors[conditionNode.type]}">${conditionNode.type}</span>)</td></tr>`);
                 /* depth_output.push(`<tr><td>depth(${conditionNode.type})</td></tr>`); */
-
-                calculateConditionalDepth(node_condition, node_then, node_else, [0, 0, 0], [false, false, false], 0, depth_output);
+                calculateDepth(conditionNode, depth = 0, depth_output)
             }
         }
     }
     return depth_output;
 } 
 
-function updateDepth(node, index, depths, closed) {
+function updateDepth(node, index, depths, closed, depth, depth_output, node2, node3) {
     if (node.condition && !closed[index]) {
+        if (depths[index] !== 0){
+            if(index === 0) {
+                let secondDepth = updateDepth(node2, 1, depths, closed);
+                let thirdDepth = updateDepth(node3, 2, depths, closed);
+                depth_output.push(`<tr><td>= max(depth(${node.type})${depths[0] !== 0 ? ' + ' + depths[0] : ''}, ${secondDepth}, ${thirdDepth})${depth !== 0 ? ' + ' + depth : ''}</td></tr>`);
+            } else if (index === 1) {
+                let firstDepth = updateDepth(node2, 0, depths, closed);
+                let thirdDepth = updateDepth(node3, 2, depths, closed);
+                console.log(depths[1]);
+                depth_output.push(`<tr><td>= max(${firstDepth}, depth(${node.type})${depths[1] !== 0 ? ' + ' + depths[1] : ''}, ${thirdDepth})${depth !== 0 ? ' + ' + depth : ''}</td></tr>`);
+            } else {
+                let firstDepth = updateDepth(node2, 0, depths, closed);
+                let secondDepth = updateDepth(tnode3, 1, depths, closed);
+                depth_output.push(`<tr><td>= max(${firstDepth}, ${secondDepth}, depth(${node.type})${depths[2] !== 0 ? ' + ' + depths[2] : ''})${depth !== 0 ? ' + ' + depth : ''}</td></tr>`);
+            }
+        }
         const depth_inner = treeDepth(node);
         depths[index] += depth_inner;
         closed[index] = true;
@@ -567,15 +582,15 @@ function treeDepth(node) {
     return 1 + maxDepth;
 }
     
-function calculateDepth(node, depth = 0, depth_output = []) {
+function calculateDepth(node, depth = 0 , depth_output = []) {
     while (node) {
-        depth_output.push(`<tr><td>${depth === 0 ? `depth(${node.type})` : `= depth(${node.type}) + ${depth}`}</td></tr>\n`);
+        if (first) depth_output.push(`<tr><td>${depth === 0 ? `depth(${node.type})` : `= depth(${node.type}) + ${depth}`}</td></tr>\n`);
         depth++;
 
         if (node.condition) {
             let depths = [0, 0, 0];
             let closed = [false, false, false];
-
+            if(first) depth_output.push(`<tr><td>= max(depth(${node.condition.type}), depth(${node.then.type}), depth(${node.else.type}))${depth !== 0 ? ' + ' + depth : ''}</td></tr>`);
             return calculateConditionalDepth(node.condition, node.then, node.else, depths, closed, depth, depth_output);
         }
 
@@ -631,6 +646,7 @@ function evaluateExpression(expression) {
     
             // Ensure the condition is a boolean before evaluating
             if (ifPart !== 'true' && ifPart !== 'false') {
+                console.log(ifPart);
                 return expr; // Stop evaluation if the condition is not a boolean
             }
     
