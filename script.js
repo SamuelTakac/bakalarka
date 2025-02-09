@@ -69,70 +69,30 @@ function splitConditional(condition) {
 function createNode(node) {
     const div = document.createElement('div');
     div.classList.add('node');
-
-    if (task === 0 && !document.getElementById('treeHeading1')) {
+    if (!document.getElementById('treeHeading1')) {
         const heading1 = document.createElement('h2');
         heading1.innerText = "Strom";
         heading1.id = 'treeHeading1';  // Add an id to prevent duplicate headings
         document.getElementById('visualization').insertAdjacentElement('beforebegin', heading1);
-    } else if (task === 1 && !document.getElementById('treeHeading2')) {
-        const heading2 = document.createElement('h2');
-        heading2.innerText = "Evaluovaný strom";
-        heading2.id = 'treeHeading2';  // Add an id to prevent duplicate headings
-        document.getElementById('visualization2').insertAdjacentElement('beforebegin', heading2);
     }
 
     const title = document.createElement('h3');
-    if(task === 0 ){
-        title.innerText = `${node.type} ∈ Term       (${node.desc})`;
+    if (node.error) {
+        title.innerHTML = `${node.type} : <span style='color: red'>${node.typing}</span>`;
     } else {
-        title.innerText = `${node.type}`;
+        typingCheckbox.checked ? title.innerText = `${node.type} : ${node.typing}` : title.innerText = `${node.type} ∈ Term (${node.desc})`;
     }
-    if(task === 1){
-    // Add evaluated value next to the type
-    let evaluatedValue;
-    try {
-        evaluatedValue = evaluate(node);  // Call the evaluate function to get the result
-    } catch (e) {
-        evaluatedValue = 'Error';  // Handle any evaluation errors gracefully
-    }
-
-    const evalSpan = document.createElement('span');
-    evalSpan.innerText = ` -> ${evaluatedValue}`;
-    evalSpan.style.color = 'green';  // Make it visually distinct by using green color
-
-    // Append title and evaluation to div
-    title.appendChild(evalSpan);
-
-    }
-
-
     div.appendChild(title);
 
-    // Create a container for children to lay them out vertically
     const childrenDiv = document.createElement('div');
     childrenDiv.classList.add('children');
-
-    // Add child nodes to the container
-    if (node.argument) {
-        childrenDiv.appendChild(createNode(node.argument));
-    }
-
-    if (node.condition) {
-        childrenDiv.appendChild(createNode(node.condition));
-    }
-
-    if (node.then) {
-        childrenDiv.appendChild(createNode(node.then));
-    }
-
-    if (node.else) {
-        childrenDiv.appendChild(createNode(node.else));
-    }
-
-    // Insert the children above the parent node
+    if (node.argument) childrenDiv.appendChild(createNode(node.argument));
+    if (node.condition) childrenDiv.appendChild(createNode(node.condition));
+    if (node.then) childrenDiv.appendChild(createNode(node.then));
+    if (node.else) childrenDiv.appendChild(createNode(node.else));
+    
     div.insertBefore(childrenDiv, title);
-
+    
     return div;
 }
 
@@ -155,7 +115,8 @@ function findClosingParenthesis(expr, startIdx) {
     throw new Error("Mismatched parentheses");
 }
 
-let task = 0;
+let start;
+let start_i = 0;
 function createTree(expression) {
     // Base case: if the expression is empty
     if (!expression) {
@@ -169,19 +130,12 @@ function createTree(expression) {
     if (expression.startsWith("(")) {
         // Find the position of the matching closing parenthesis
         const closingParenIdx = findClosingParenthesis(expression, 0);
-
-        // Extract the inner expression between the parentheses
         const innerExpression = expression.slice(1, closingParenIdx);
-        if(task === 1){
-            // Create a tree node for the bracketed expression
-            return createTree(innerExpression); // Recursively evaluate the inner expression
-        } else {
-            const tree = {
-                type: expression,
-                desc: "brack",
-                argument: createTree(innerExpression)
-            };
-            return tree;
+        return createTree(innerExpression); // Recursively evaluate the inner expression
+    } else {
+        if(start_i==0) {
+        start = expression;
+        start_i++;
         }
     }
 
@@ -264,6 +218,84 @@ function createTree(expression) {
     throw new Error(`Invalid expression: ${expression}`);
 }
 
+function createTreeWithTypes(expression, expectedType) {
+    if (!expression) return null;
+    expression = expression.trim();
+
+    if (expression.startsWith("(")) {
+        const closingParenIdx = findClosingParenthesis(expression, 0);
+        const innerExpression = expression.slice(1, closingParenIdx);
+        return createTreeWithTypes(innerExpression, expectedType);
+    }
+
+
+    if (expression === "true") {
+        if(expectedType === "Bool") {
+            return { type: "true", desc: "true", typing:"Bool" };
+        } else {
+            return { type: "true", desc: "true", typing:"Nat", error: true};
+        }
+    }
+
+    if (expression === "false") {
+        if(expectedType === "Bool") {
+            return { type: "false", desc: "false", typing:"Bool" };
+        } else {
+            return { type: "false", desc: "false", typing:"Nat", error: true};
+        }
+    }
+
+    if (expression === "0") {
+        if(expectedType === "Nat") {
+            return { type: "0", desc: "0", typing:"Nat" };
+        } else {
+            return { type: "0", desc: "0", typing:"Bool", error: true};
+        }
+    }
+
+    if (expression.startsWith("succ")) {
+        const subTree = createTreeWithTypes(expression.slice(5).trim(), "Nat");
+        if(expectedType === "Nat") {
+            return { type: expression, desc: "succ", typing:"Nat", argument: subTree };
+        } else {
+            return { type: expression, desc: "succ", typing:"Bool" ,error: true};
+        }
+    }
+
+    if (expression.startsWith("pred")) {
+        const subTree = createTreeWithTypes(expression.slice(5).trim(), "Nat");
+        if(expectedType === "Nat") {
+            return { type: expression, desc: "pred", typing:"Nat", argument: subTree };
+        } else {
+            return { type: expression, desc: "pred", typing:"Bool" ,error: true};
+        }
+    }
+
+    if (expression.startsWith("iszero")) {
+        const subTree = createTreeWithTypes(expression.slice(7).trim(), "Nat");
+        if(expectedType === "Bool") {
+            return { type: expression, desc: "iszero", typing:"Bool", argument: subTree };
+        } else {
+            return { type: expression, desc: "iszero", typing:"Nat" ,error: true};
+        }
+    }
+
+    if (expression.startsWith("if")) {
+        const { ifPart, thenPart, elsePart } = splitConditional(expression);
+        const tree = {
+            desc: "if",
+            type: expression,
+            condition: createTreeWithTypes(ifPart, "Bool"),
+            then: createTreeWithTypes(thenPart, expectedType),
+            else: createTreeWithTypes(elsePart, expectedType),
+            typing:expectedType
+        };
+        return tree;
+    }
+
+    throw new Error(`Invalid expression: ${expression}`);
+}
+
 function sizeCount(tree) {
     // Initialize a queue with the root node
     let queue = [tree];
@@ -291,9 +323,9 @@ function sizeCount(tree) {
 
         // Prepare the row for the current level
         const currentLevelString = currentLevel.join(' + ');
-        const sizeCalculation = `${currentLevelString} + ${size}`;
-        output += `<tr><td>= ${sizeCalculation}</td></tr>`; // Add to the table
-
+        const sizeCalculation = size === 0 ? currentLevelString : `${currentLevelString} + ${size}`;
+        output += `<tr><td>${size === 0 ? sizeCalculation : `= ${sizeCalculation}`}</td></tr>`;
+            
         // Update the total size count
         size += currentLevelSize;
         
@@ -302,7 +334,7 @@ function sizeCount(tree) {
     }
 
     // Final output with total size
-    output += `<tr><td>= ${size}</td></tr>`;
+    output += `<tr style='color: red'><td>= ${size}</td></tr>`;
     
     // Write the output to the div
     document.getElementById("size").innerHTML = output + "</table>"; // Close the table
@@ -313,7 +345,7 @@ function conCount(tree) {
     let queue = [tree];
     let output = "<table border='1' style='border-collapse: collapse; width: 100%;'><tr><th>Kalkulácia počtu konštánt</th></tr>"; // Initialize the table
     let constants = [];
-
+    let count = 0;
     while (queue.length > 0) {
         const currentLevel = [];
         const nextQueue = [];
@@ -348,7 +380,8 @@ function conCount(tree) {
 
         // Combine current level calculation with constants
         const constantCalculation = `${currentLevelString}${constantsString}`;
-        output += `<tr><td>= ${constantCalculation}</td></tr>`; // Add to the table
+        output += `<tr><td>${count === 0 ? constantCalculation : `= ${constantCalculation}`}</td></tr>`;
+        count++;
         for (let i = 0; i < newConstants.length; i++) {
             constants.push(newConstants[i]);
         }
@@ -359,182 +392,284 @@ function conCount(tree) {
     // Final output with unique constants
     const uniqueConstants = Array.from(new Set(constants)); // To ensure unique constants in final output
     const finalConstantString = uniqueConstants.length > 0 ? `{${uniqueConstants.join(',')}}` : '{}';
-    output += `<tr><td>= ${finalConstantString}</td></tr>`; // Final unique constants
+    output += `<tr style='color: red'><td>= ${finalConstantString}</td></tr>`; // Final unique constants
 
     // Write the output to the div
     document.getElementById("constants").innerHTML = output + "</table>"; // Close the table
 }
 
-function evaluate(tree) {
-    if (!tree) return null;
+function removeUnnecessaryParentheses(expression) {
+    return expression
+        .replace(/\(\s*([0-9]+)\s*\)/g, '$1')  // Remove parentheses around numbers
+        .replace(/\(\s*(true|false)\s*\)/g, '$1') // Remove parentheses around boolean values
+        .replace(/pred \(\s*([0-9]+)\s*\)/g, 'pred $1') // Remove unnecessary parentheses after pred
+        .replace(/succ \(\s*([0-9]+)\s*\)/g, 'succ $1') // Remove unnecessary parentheses after succ
+        .replace(/iszero \(\s*([0-9]+)\s*\)/g, 'iszero $1'); // Remove unnecessary parentheses after iszero
+}
 
-    // Base cases for constants
-    if (tree.type === "0") return 0;
-    if (tree.type === "true") return true;
-    if (tree.type === "false") return false;
-
-    // Handle 'succ'
-    if (tree.type.startsWith("succ")) {
-        const evaluatedArgument = evaluate(tree.argument);
-        if (typeof evaluatedArgument !== 'number') {
-            return "Error";  // Return "Error" instead of throwing an error
-        }
-        return evaluatedArgument + 1; // Successor increases number by 1
-    }
-
-    // Handle 'pred'
-    if (tree.type.startsWith("pred")) {
-        const evaluatedArgument = evaluate(tree.argument);
-        if (typeof evaluatedArgument !== 'number') {
-            return "Error";  // Return "Error" instead of throwing an error
-        }
-        return Math.max(evaluatedArgument - 1, 0); // Predecessor decreases number but keeps it >= 0
-    }
-
-    // Handle 'iszero'
-    if (tree.type.startsWith("iszero")) {
-        const evaluatedArgument = evaluate(tree.argument);
-        if (typeof evaluatedArgument !== 'number') {
-            return "Error";  // Return "Error" instead of throwing an error
-        }
-        return evaluatedArgument === 0; // Returns true if argument is zero
-    }
-
-    // Handle 'if'
-    if (tree.type.startsWith("if")) {
-        const condition = evaluate(tree.condition);
-        if (condition === "Error") return "Error";  // Propagate "Error" if the condition has an error
-        if (condition) {
-            const thenResult = evaluate(tree.then);
-            return thenResult === "Error" ? "Error" : thenResult;  // Propagate "Error" from 'then' branch
+function removeUnnecessaryParentheses2(expr) {
+    let i = 0;
+    while (i < expr.length) {
+        if (expr[i] === '(') {
+            try {
+                // Find the matching closing parenthesis
+                const closingIdx = findClosingParenthesis(expr, i);
+                // Skip to the character after the closing parenthesis
+                i = closingIdx + 1;
+            } catch (error) {
+                // If there's no matching closing parenthesis, remove the unmatched opening parenthesis
+                expr = expr.slice(0, i) + expr.slice(i + 1);
+                // Don't reset i, continue from the current position
+            }
         } else {
-            const elseResult = evaluate(tree.else);
-            return elseResult === "Error" ? "Error" : elseResult;  // Propagate "Error" from 'else' branch
+            i++;  // Move to the next character if it's not an opening parenthesis
+        }
+    }
+    return expr;
+}
+
+let condition_nodes = [];
+let first = true;
+function calculateConditionalDepth(node_condition, node_then, node_else, depths, closed, depth, depth_output) {
+    let firstDepth, secondDepth, thirdDepth;
+    firstDepth = updateDepth(node_condition, 0, depths, closed);
+    secondDepth = updateDepth(node_then, 1, depths, closed);
+    thirdDepth = updateDepth(node_else, 2, depths, closed);
+
+    depth_output.push(`<tr><td>= max(${firstDepth}, ${secondDepth}, ${thirdDepth})${depth !== 0 ? ' + ' + depth : ''}</td></tr>`);
+
+    if (node_condition.argument) {
+        depths[0]++;
+        return calculateConditionalDepth(node_condition.argument, node_then, node_else, depths, closed, depth, depth_output);
+    } else if (!node_condition.argument) {
+        if (!closed[0]) {
+            depths[0]++;
+            closed[0] = true;
+            firstDepth = `${depths[0]}`;
+            depth_output.push(`<tr><td>= max(${firstDepth}, ${secondDepth}, ${thirdDepth})${depth !== 0 ? ' + ' + depth : ''}</td></tr>`);
+
         }
     }
 
-    // If none of the above matches, return "Error"
-    return "Error";
-}
+    if (node_then.argument) {
+        depths[1]++;
+        return calculateConditionalDepth(node_condition, node_then.argument, node_else, depths, closed, depth, depth_output);
+    } else if (!node_then.argument) {
+        if (!closed[1]) {
+            depths[1]++;
+            closed[1] = true;
+            secondDepth = `${depths[1]}`;
+            depth_output.push(`<tr><td>= max(${firstDepth}, ${secondDepth}, ${thirdDepth})${depth !== 0 ? ' + ' + depth : ''}</td></tr>`);
 
-function evaluateTreeFromBottom(tree) {
-    if (!tree) return null;
-
-    // A queue for level order traversal
-    const queue = [tree];
-
-    // Use a map to track the original string representation for each node
-    const nodeMap = new Map();
-
-    // Initialize node map with original tree structure
-    const initializeNodeMap = (node) => {
-        if (!node) return;
-        nodeMap.set(node, node.type);
-        initializeNodeMap(node.argument);
-        initializeNodeMap(node.condition);
-        initializeNodeMap(node.then);
-        initializeNodeMap(node.else);
-    };
-    initializeNodeMap(tree);
-
-    while (queue.length > 0) {
-        const currentNode = queue.shift(); // Get the next node
-
-        // Evaluate child nodes first
-        if (currentNode.argument) queue.push(currentNode.argument);
-        if (currentNode.condition) queue.push(currentNode.condition);
-        if (currentNode.then) queue.push(currentNode.then);
-        if (currentNode.else) queue.push(currentNode.else);
-
-        // Evaluate the current node
-        const evaluatedResult = evaluate(currentNode);
-
-        // Replace current node's string representation in its parent, excluding the root node
-        if (currentNode !== tree) { // Do not update the root node's type
-            const parentNode = getParentNode(tree, currentNode);
-            if (parentNode) {
-                const originalString = nodeMap.get(currentNode);
-                const updatedString = evaluatedResult.toString();
-                
-                // Update the parent node's type string by replacing the original with the evaluated result
-                parentNode.type = parentNode.type.replace(originalString, updatedString);
-            }
         }
     }
 
-    // After all nodes are evaluated, return the updated tree without changing the root
-    return tree;
-}
+    if (node_else.argument) {
+        depths[2]++;
+        return calculateConditionalDepth(node_condition, node_then, node_else.argument, depths, closed, depth, depth_output);
+    } else if (!node_else.argument) {
+        if (!closed[2]) {
+            depths[2]++;
+            closed[2] = true;
+            thirdDepth = `${depths[2]}`;
+            depth_output.push(`<tr><td>= max(${firstDepth}, ${secondDepth}, ${thirdDepth})${depth !== 0 ? ' + ' + depth : ''}</td></tr>`);
 
-function getParentNode(tree, targetNode) {
-    const queue = [tree];
-
-    while (queue.length > 0) {
-        const currentNode = queue.shift();
-
-        // Check for child nodes
-        if (currentNode.argument === targetNode || currentNode.condition === targetNode ||
-            currentNode.then === targetNode || currentNode.else === targetNode) {
-            return currentNode; // Found the parent node
         }
 
-        // Add child nodes to the queue
-        if (currentNode.argument) queue.push(currentNode.argument);
-        if (currentNode.condition) queue.push(currentNode.condition);
-        if (currentNode.then) queue.push(currentNode.then);
-        if (currentNode.else) queue.push(currentNode.else);
+        const biggest = Math.max(...depths);
+        if (depth !== 0) {
+            depth_output.push(`<tr><td>= ${biggest} + ${depth}</td></tr>`);
+            depth_output.push(first ? `<tr style='color: red'><td>= ${biggest + depth}</td></tr>` : `<tr><td>= ${biggest + depth}</td></tr>`);
+        } else {
+            depth_output.push(first ? `<tr style='color: red'><td>= ${biggest}</td></tr>` : `<tr><td>= ${biggest}</td></tr>`);
+        }        
+
+        if (first) {
+            first = false;
+            const colors = ["blue", "green", "purple", "orange", "brown", "pink", "teal", "cyan", "lime"]; // Expand if needed
+            const typeColors = {}; // Store assigned colors for each unique type
+            let colorIndex = 0;
+
+            // Collect all unique conditionNode.type values first
+            const conditionTypes = new Set();
+
+            for (let conditionNode of condition_nodes) {
+                if (!typeColors[conditionNode.type]) {
+                    typeColors[conditionNode.type] = colors[colorIndex % colors.length];
+                    colorIndex++;
+                }
+                conditionTypes.add(conditionNode.type);
+            }
+
+            // Modify depth_output[0] only once, applying **all** colors
+            let firstLine = depth_output[0]; // Keep original first line
+            for (let type of conditionTypes) {
+                const color = typeColors[type];
+                if (firstLine.includes(`${type}`)) {
+                    firstLine = firstLine.replace(`${type}`,`<span style="color:${color}">${type}</span>`);
+                }
+            }
+            depth_output[0] = firstLine; // Update first line after all replacements
+
+            // Process each conditionNode as before
+            for (let conditionNode of condition_nodes) {
+                depth_output.push(`<tr><td> </td></tr>`); 
+                const node_condition = conditionNode.condition;
+                const node_then = conditionNode.then;
+                const node_else = conditionNode.else;
+            
+                // Push the depth with color-coded condition type
+                depth_output.push(`<tr><td>depth(<span style="color:${typeColors[conditionNode.type]}">${conditionNode.type}</span>)</td></tr>`);
+                /* depth_output.push(`<tr><td>depth(${conditionNode.type})</td></tr>`); */
+
+                calculateConditionalDepth(node_condition, node_then, node_else, [0, 0, 0], [false, false, false], 0, depth_output);
+            }
+        }
     }
+    return depth_output;
+} 
 
-    return null;
-}
-
-document.getElementById("drawTree").addEventListener("click", () => {
-    const expression = document.getElementById("expressionInput").value.trim();
-    const visualizationContainer = document.getElementById('visualization');
-    const sizeContainer = document.getElementById('size');
-    const conContainer = document.getElementById(`constants`);
-
-    const visualizationContainer2 = document.getElementById('visualization2');
-
-    task = 0;
-    if (expression) {
-        try {
-            visualizationContainer.innerHTML = "";
-            visualizationContainer2.innerHTML = "";
-            const tokenizedExpression = tokenize(expression);
-            const treeData = createTree(tokenizedExpression);
-            const visualizationNode = createNode(treeData);
-            visualizationContainer.appendChild(visualizationNode);
-
-            task = 1;
-            const treeDataNew = createTree(tokenizedExpression);
-            sizeCount(treeDataNew);
-            conCount(treeDataNew);
-            const evaluatedTree = evaluateTreeFromBottom(treeDataNew);
-            const visualizationNode2 = createNode(evaluatedTree);
-            visualizationContainer2.appendChild(visualizationNode2);
-
-
-        } catch (error) {
-            alert("Please enter a valid expression!!!!");
-            visualizationContainer.innerHTML = "";
-            sizeContainer.innerHTML = "";
-            conContainer.innerHTML = "";
-            visualizationContainer2.innerHTML = "";
-
-            const treeHeading1 = document.getElementById('treeHeading1');
-            const treeHeading2 = document.getElementById('treeHeading2');
-            if (treeHeading1) {
-                treeHeading1.remove();
-            }
-            if (treeHeading2) {
-                treeHeading2.remove();
-            }
-        }
+function updateDepth(node, index, depths, closed) {
+    if (node.condition && !closed[index]) {
+        const depth_inner = treeDepth(node);
+        depths[index] += depth_inner;
+        closed[index] = true;
+        return `${depths[index]}`;
+    } else if (node.argument || !closed[index]) {
+        return `depth(${node.type})${depths[index] !== 0 ? ` + ${depths[index]}` : ''}`;
     } else {
-        alert("Please enter a valid expression.");
+        return `${depths[index]}`;
     }
-});
+}
+
+function treeDepth(node) {
+    if (!node || typeof node !== "object") return 0;
+  
+    let maxDepth = 0;
+  
+    // Check possible child nodes
+    if (node.argument) {
+      maxDepth = Math.max(maxDepth, treeDepth(node.argument));
+    }
+    if (node.condition) {
+      maxDepth = Math.max(maxDepth, treeDepth(node.condition));
+      if (first && !condition_nodes.some(existingNode => existingNode === node)) {
+        condition_nodes.push(node);
+      }
+    }
+    if (node.then) {
+      maxDepth = Math.max(maxDepth, treeDepth(node.then));
+    }
+    if (node.else) {
+      maxDepth = Math.max(maxDepth, treeDepth(node.else));
+    }
+  
+    return 1 + maxDepth;
+}
+    
+function calculateDepth(node, depth = 0, depth_output = []) {
+    while (node) {
+        depth_output.push(`<tr><td>${depth === 0 ? `depth(${node.type})` : `= depth(${node.type}) + ${depth}`}</td></tr>\n`);
+        depth++;
+
+        if (node.condition) {
+            let depths = [0, 0, 0];
+            let closed = [false, false, false];
+
+            return calculateConditionalDepth(node.condition, node.then, node.else, depths, closed, depth, depth_output);
+        }
+
+        node = node.argument;
+        if (!node) {
+            break;
+        }
+    }
+    return depth_output;
+}
+
+function evaluateExpression(expression) {
+    let steps = [];
+    let currentExpression = expression;
+
+    function evaluateStep(expr) {
+        expr = removeUnnecessaryParentheses(expr); // Apply before each evaluation step
+    
+        if (expr.includes("succ true") || expr.includes("succ false")) {
+            return expr;  // Invalid expression, stop evaluation
+        }
+    
+        if (expr.includes("pred true") || expr.includes("pred false")) {
+            return expr;  // Invalid expression, stop evaluation
+        }
+        if (expr.includes('iszero true') || expr.includes('iszero false')) {
+            return expr; // Invalid, should not reduce
+        }
+        // Rule for iszero 0
+        if (expr.includes('iszero 0')) {
+            return expr.replace('iszero 0', 'true');
+        }
+        // Rule for iszero(succ nv1)
+        if (expr.includes('iszero ( succ 0 )')) {
+            return expr.replace('iszero ( succ 0 )', 'false');
+        }           
+        if (expr.includes('pred 0')) {
+            return expr.replace('pred 0', '0');
+        }
+        if (expr.includes('pred ( succ 0 )')) {
+            return expr.replace('pred ( succ 0 )', '0');
+        }
+        // Rule for iszero(succ nv1) -> false for any succ
+        if (expr.match(/iszero \( succ /)) {
+            return expr.replace(/iszero \( succ /, 'false');
+        }
+        if (expr.includes('if')) {
+            const ifIdx = expr.indexOf('if');
+            const { ifPart, thenPart, elsePart } = splitConditional(expr);
+    
+            // Ensure the condition is a boolean before evaluating
+            if (ifPart !== 'true' && ifPart !== 'false') {
+                return expr; // Stop evaluation if the condition is not a boolean
+            }
+    
+            let replacement = ifPart === 'true' ? thenPart : elsePart;
+    
+            // Remove unnecessary parentheses after the replacement
+            let replacedExpr = expr.slice(0, ifIdx) + replacement + expr.slice(expr.indexOf(elsePart) + elsePart.length);
+            replacedExpr = removeUnnecessaryParentheses(replacedExpr);
+            // Remove any unnecessary outer parentheses that may have remained
+            return removeUnnecessaryParentheses2(replacedExpr);
+        }
+        if (expr.match(/pred \( succ \((.*?)\) \)/)) {
+            return expr.replace(/pred \( succ \((.*?)\) \)/, '$1');
+        }
+        return expr;
+    } 
+    let previousExpression;
+    do {
+        previousExpression = currentExpression;
+        steps.push(currentExpression); 
+        currentExpression = evaluateStep(currentExpression);
+        currentExpression = removeUnnecessaryParentheses(currentExpression);
+    } while (currentExpression !== previousExpression);
+
+    steps.push(currentExpression);
+
+    let tableHTML = '<table border="1" style="border-collapse: collapse; width: 100%;">';
+    tableHTML += '<tr><th>Evaluácia termu</th></tr>';
+    let i = 0;
+    steps.forEach((step, index) => {
+        if (index < steps.length - 1) {
+            if (i == 0) {
+                tableHTML += `<tr><td>${step}</td></tr>`;
+                i++;
+            } else {
+                tableHTML += `<tr><td>-> ${step}</td></tr>`;
+            }
+        }
+    });
+    tableHTML += '</table>';
+    document.getElementById('evaluate').innerHTML = tableHTML;
+}
 
 document.getElementById("typingCheckbox").addEventListener("change", function() {
     const typeSelect = document.getElementById("typeSelect");
@@ -543,5 +678,48 @@ document.getElementById("typingCheckbox").addEventListener("change", function() 
         typeSelect.style.display = "inline";  // Show the type selection when checkbox is checked
     } else {
         typeSelect.style.display = "none";    // Hide the type selection when checkbox is unchecked
+    }
+});
+
+document.getElementById("drawTree").addEventListener("click", () => {
+    const expression = document.getElementById("expressionInput").value.trim();
+    const visualizationContainer = document.getElementById('visualization');
+    const sizeContainer = document.getElementById('size');
+    const conContainer = document.getElementById(`constants`);
+    const depthContainer = document.getElementById(`depth`);
+    const evaluationContainer = document.getElementById('evaluate');
+
+    if (expression) {
+        try {
+            visualizationContainer.innerHTML = "";
+            const tokenizedExpression = tokenize(expression);
+            if (document.getElementById("typingCheckbox").checked) {
+                const expectedType = document.getElementById("typeSelect").value;
+                treeData = createTreeWithTypes(tokenizedExpression, expectedType);
+            } else {
+                treeData = createTree(tokenizedExpression);
+            }
+            const visualizationNode = createNode(treeData);
+            visualizationContainer.appendChild(visualizationNode);
+            treeDataNew = createTree(tokenizedExpression);
+            sizeCount(treeDataNew);
+            conCount(treeDataNew);
+
+            condition_nodes = [];
+            first = true;
+            const depth_output = calculateDepth(treeDataNew);
+            depthContainer.innerHTML = `<table><tr><th>Kalkulácia hĺbky</th></tr>${depth_output.join("")}</table>`;
+
+            evaluateExpression(tokenize(start));
+        } catch (error) {
+            alert("Please enter a valid expression!!!!");
+            visualizationContainer.innerHTML = "";
+            sizeContainer.innerHTML = "";
+            conContainer.innerHTML = "";
+            depthContainer.innerHTML = "";
+            evaluationContainer.innerHTML = "";
+        }
+    } else {
+        alert("Please enter a valid expression.");
     }
 });
