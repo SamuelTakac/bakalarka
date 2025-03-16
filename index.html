@@ -5,29 +5,43 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Jazyk čísel a pravdivostných hodnôt</title>
     <link rel="stylesheet" href="styles.css">
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+
+    <script type="text/javascript">
+        window.MathJax = {
+            loader: {
+                load: ['[tex]/bussproofs', '[tex]/color'] // Load both extensions
+            },
+            tex: {
+                packages: {'[+]': ['bussproofs', 'color']} // Add both to tex packages
+            }
+        };
+    </script>
 </head>
 <body>
     <h1>Jazyk čísel a pravdivostných hodnôt</h1>
     <div style="display: flex; align-items: center;">
-        <input type="text" id="expressionInput" placeholder="Zadaj výraz (napr. (if (iszero (pred (succ 0))) then true else false))" autocomplete="off"/>
-        
-        <label style="display: flex; align-items: center; margin-left: 10px;">
-            <input type="checkbox" id="typingCheckbox" style="margin-right: 5px;" /> Typovanie
-        </label>
-    
-        <select id="typeSelect" style="display: none; margin-left: 10px;">
-            <option value="Nat">Nat</option>
-            <option value="Bool">Bool</option>
-        </select>
+    <input type="text" id="expressionInput" placeholder="Zadaj výraz (napr. (if (iszero (pred (succ 0))) then true else false))" autocomplete="off"/>
+
+    <label style="display: flex; align-items: center; margin-left: 10px;">
+    <input type="checkbox" id="typingCheckbox" style="margin-right: 5px;" /> Typovanie
+    </label>
+
+    <select id="typeSelect" style="display: none; margin-left: 10px;">
+    <option value="Nat">Nat</option>
+    <option value="Bool">Bool</option>
+    </select>
     </div>
     <button id="drawTree">Vypracuj</button>
-    <div>pred( succ( if iszero( succ 0) then pred( if iszero( pred 0) then false else true) else ( if iszero 0 then (if true then true else false) else true)))</div>
+
+    <div>pred( succ( if iszero( succ 0) then pred( if iszero( pred 0) then false else true) else ( if iszero 0 then (if true then true else false) else true)))</div> 
     <div>pred( succ( if iszero( succ 0) then ( if iszero( pred 0) then false else true) else ( if iszero 0 then (if true then true else false) else true)))</div>
     <div>succ ( succ ( if iszero ( succ 0 ) then true else false ) )</div>
     <div>pred (if iszero(pred 0) then pred 0 else false) </div>
     <div>if 0 then 0 else 0</div> 
     <div>if iszero 0 then 0 else true</div>
     <div>pred(succ 0)</div>
+
     <div id="visualization"></div>
     <div id="size"></div>
     <div id="constants"></div>

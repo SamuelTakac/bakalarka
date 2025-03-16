@@ -66,34 +66,52 @@ function splitConditional(condition) {
     return { ifPart, thenPart, elsePart };
 }
 
-function createNode(node) {
-    const div = document.createElement('div');
-    div.classList.add('node');
-    if (!document.getElementById('treeHeading1')) {
-        const heading1 = document.createElement('h2');
-        heading1.innerText = "Strom";
-        heading1.id = 'treeHeading1';  // Add an id to prevent duplicate headings
-        document.getElementById('visualization').insertAdjacentElement('beforebegin', heading1);
+function generateProofTree(tree) {
+    if (!tree) {
+        throw new Error("Invalid tree");
     }
 
-    const title = document.createElement('h3');
-    if (node.error) {
-        title.innerHTML = `${node.type} : <span style='color: red'>${node.typing}</span>`;
-    } else {
-        typingCheckbox.checked ? title.innerText = `${node.type} : ${node.typing}` : title.innerText = `${node.type} ∈ Term (${node.desc})`;
-    }
-    div.appendChild(title);
+    let proofTree = `<p>$$\\begin{prooftree}`;
 
-    const childrenDiv = document.createElement('div');
-    childrenDiv.classList.add('children');
-    if (node.argument) childrenDiv.appendChild(createNode(node.argument));
-    if (node.condition) childrenDiv.appendChild(createNode(node.condition));
-    if (node.then) childrenDiv.appendChild(createNode(node.then));
-    if (node.else) childrenDiv.appendChild(createNode(node.else));
+    function getNodeLabel(node) {
+        if (node.error) {
+            return `${node.type} : \\textcolor{red}{${node.typing}}`;
+        } else {
+            return typingCheckbox.checked ? `${node.type} : ${node.typing}` : `${node.type} ∈ Term`;
+        }
+    }
+
+    function buildTree(node) {
+        if (!node) return "";
     
-    div.insertBefore(childrenDiv, title);
+        if (node.desc === "0" || node.desc === "true" || node.desc === "false") {
+            return `\\AxiomC{${getNodeLabel(node)}}`;
+        }
     
-    return div;
+        let subTree = node.argument ? buildTree(node.argument) : ""; // Only build if argument exists
+    
+        if (node.desc === "succ" || node.desc === "pred" || node.desc === "iszero") {
+            return `${subTree} ${subTree ? `\\RightLabel{(${node.desc})}\\UnaryInfC{${getNodeLabel(node)}}` : `\\AXC{${getNodeLabel(node)}}`}`;
+        }
+    
+        if (node.desc === "if") {
+            let conditionSubTree = node.condition ? buildTree(node.condition) : "";
+            let thenSubTree = node.then ? buildTree(node.then) : "";
+            let elseSubTree = node.else ? buildTree(node.else) : "";
+    
+            return `${conditionSubTree}
+                    ${thenSubTree}
+                    ${elseSubTree}
+                    ${conditionSubTree && thenSubTree && elseSubTree ? `\\RightLabel{(${node.desc})}` : ""}
+                    \\TrinaryInfC{${getNodeLabel(node)}}`;
+        }
+    
+        return "";
+    }
+
+    proofTree += buildTree(tree);
+    proofTree += "\\end{prooftree}$$</p>";
+    return proofTree;
 }
 
 function findClosingParenthesis(expr, startIdx) {
@@ -538,7 +556,6 @@ function updateDepth(node, index, depths, closed, depth, depth_output, node2, no
             } else if (index === 1) {
                 let firstDepth = updateDepth(node2, 0, depths, closed);
                 let thirdDepth = updateDepth(node3, 2, depths, closed);
-                console.log(depths[1]);
                 depth_output.push(`<tr><td>= max(${firstDepth}, depth(${node.type})${depths[1] !== 0 ? ' + ' + depths[1] : ''}, ${thirdDepth})${depth !== 0 ? ' + ' + depth : ''}</td></tr>`);
             } else {
                 let firstDepth = updateDepth(node2, 0, depths, closed);
@@ -646,7 +663,6 @@ function evaluateExpression(expression) {
     
             // Ensure the condition is a boolean before evaluating
             if (ifPart !== 'true' && ifPart !== 'false') {
-                console.log(ifPart);
                 return expr; // Stop evaluation if the condition is not a boolean
             }
     
@@ -699,17 +715,18 @@ document.getElementById("typingCheckbox").addEventListener("change", function() 
     }
 });
 
+
 document.getElementById("drawTree").addEventListener("click", () => {
     const expression = document.getElementById("expressionInput").value.trim();
     const visualizationContainer = document.getElementById('visualization');
     const sizeContainer = document.getElementById('size');
-    const conContainer = document.getElementById(`constants`);
-    const depthContainer = document.getElementById(`depth`);
+    const conContainer = document.getElementById('constants');
+    const depthContainer = document.getElementById('depth');
     const evaluationContainer = document.getElementById('evaluate');
 
     if (expression) {
         try {
-             visualizationContainer.innerHTML = "";
+            visualizationContainer.innerHTML = "";
             const tokenizedExpression = tokenize(expression);
             if (document.getElementById("typingCheckbox").checked) {
                 const expectedType = document.getElementById("typeSelect").value;
@@ -717,8 +734,10 @@ document.getElementById("drawTree").addEventListener("click", () => {
             } else {
                 treeData = createTree(tokenizedExpression);
             }
-            const visualizationNode = createNode(treeData);
-            visualizationContainer.appendChild(visualizationNode);
+
+            visualizationContainer.innerHTML = generateProofTree(treeData);
+            MathJax.typesetPromise();
+            console.log(generateProofTree(treeData));
             treeDataNew = createTree(tokenizedExpression);
             sizeCount(treeDataNew);
             conCount(treeDataNew);
@@ -731,7 +750,7 @@ document.getElementById("drawTree").addEventListener("click", () => {
             start_i = 0;
             evaluateExpression(tokenize(start));
         } catch (error) {
-            alert("Please enter a valid expression!!!!");
+            alert(error.message);
             visualizationContainer.innerHTML = "";
             sizeContainer.innerHTML = "";
             conContainer.innerHTML = "";
@@ -739,6 +758,7 @@ document.getElementById("drawTree").addEventListener("click", () => {
             evaluationContainer.innerHTML = "";
         }
     } else {
-        alert("Please enter a valid expression.");
+        // Catch any error and display the actual error message in the alert
+        alert("chyba");
     }
 });
