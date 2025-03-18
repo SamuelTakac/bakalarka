@@ -1,33 +1,60 @@
+let type = null;
 function tokenize(expression) {
     // Remove whitespaces
     const strWithoutWhitespace = expression.replace(/\s+/g, '');
-    
+    const lowerCase = strWithoutWhitespace.toLowerCase();
+
     // List of known keywords
-    const keywords = ["if", "iszero", "true", "false", "then", "else", "succ", "pred", "0", "(", ")"];
-    
+    const keywords = ["if", "iszero", "true", "false", "then", "else", "succ", "pred", "0", "(", ")", ":", "bool", "nat", "?"];
+    const typeAnnotations = ["bool", "nat", "?"]; // Only these are valid types
+
     // Initialize an empty list to store the matched words
     const result = [];
-    
+    type = null;
     // Start from the beginning of the string
     let i = 0;
-    while (i < strWithoutWhitespace.length) {
+    while (i < lowerCase.length) {
         let matched = false;
         // Try to match any keyword from the list
         for (const word of keywords) {
-            if (strWithoutWhitespace.startsWith(word, i)) {
-                result.push(word);  // Add the matched word to the result
-                i += word.length;  // Move the index past the matched word
+            if (lowerCase.startsWith(word, i)) {
+                if (word === ":") {
+                    if (type !== null || i + 1 >= lowerCase.length) {
+                        throw new Error("Invalid type annotation position");
+                    }
+
+                    // Check the next token for a valid type
+                    const nextToken = keywords.find(kw => lowerCase.startsWith(kw, i + 1));
+                    if (!typeAnnotations.includes(nextToken)) {
+                        throw new Error(`Invalid type annotation ${nextToken}`);
+                    }
+                    type = nextToken;
+                    i += (":" + nextToken).length; // Move past ":type"
+                    matched = true;
+                    break;
+                } 
+
+                if (type !== null) {
+                    throw new Error("Type annotation must be at the end");
+                }
+
+                result.push(word); // Add the matched word to the result
+                i += word.length; // Move the index past the matched word
                 matched = true;
                 break;
             }
         }
+
         if (!matched) {
             throw new Error(`Unknown token starting at index ${i}`);
         }
     }
-
-    // Return the matched tokens as a space-separated string
-    return result.join(' ');
+    if (type === "nat") {
+        type = "Nat";
+    } else if (type === "bool") {
+        type = "Bool";
+    }
+    return result.join(' ')
 }
 
 function splitConditional(condition) {
@@ -64,54 +91,6 @@ function splitConditional(condition) {
     const elsePart = condition.substring(elseIdx + 4).trim();
 
     return { ifPart, thenPart, elsePart };
-}
-
-function generateProofTree(tree) {
-    if (!tree) {
-        throw new Error("Invalid tree");
-    }
-
-    let proofTree = `<p>$$\\begin{prooftree}`;
-
-    function getNodeLabel(node) {
-        if (node.error) {
-            return `${node.type} : \\textcolor{red}{${node.typing}}`;
-        } else {
-            return typingCheckbox.checked ? `${node.type} : ${node.typing}` : `${node.type} ∈ Term`;
-        }
-    }
-
-    function buildTree(node) {
-        if (!node) return "";
-    
-        if (node.desc === "0" || node.desc === "true" || node.desc === "false") {
-            return `\\AxiomC{${getNodeLabel(node)}}`;
-        }
-    
-        let subTree = node.argument ? buildTree(node.argument) : ""; // Only build if argument exists
-    
-        if (node.desc === "succ" || node.desc === "pred" || node.desc === "iszero") {
-            return `${subTree} ${subTree ? `\\RightLabel{(${node.desc})}\\UnaryInfC{${getNodeLabel(node)}}` : `\\AXC{${getNodeLabel(node)}}`}`;
-        }
-    
-        if (node.desc === "if") {
-            let conditionSubTree = node.condition ? buildTree(node.condition) : "";
-            let thenSubTree = node.then ? buildTree(node.then) : "";
-            let elseSubTree = node.else ? buildTree(node.else) : "";
-    
-            return `${conditionSubTree}
-                    ${thenSubTree}
-                    ${elseSubTree}
-                    ${conditionSubTree && thenSubTree && elseSubTree ? `\\RightLabel{(${node.desc})}` : ""}
-                    \\TrinaryInfC{${getNodeLabel(node)}}`;
-        }
-    
-        return "";
-    }
-
-    proofTree += buildTree(tree);
-    proofTree += "\\end{prooftree}$$</p>";
-    return proofTree;
 }
 
 function findClosingParenthesis(expr, startIdx) {
@@ -314,11 +293,64 @@ function createTreeWithTypes(expression, expectedType) {
     throw new Error(`Invalid expression: ${expression}`);
 }
 
+let wrongTyped = false;
+function generateProofTree(tree, maxDepth) {
+    if (!tree) {
+        throw new Error("Invalid tree");
+    }
+    wrongTyped = false;
+    let proofTree = `\\begin{prooftree}`;
+
+    function getNodeLabel(node) {
+        if (node.error) {
+            //return `${node.type} : }\\textcolor{red}{\\text{${node.typing}}}`;
+            wrongTyped = true;
+            return `${node.type} : ${node.typing}  X`;
+        } else {
+            return type ? `${node.type} : ${node.typing}` : `${node.type} ∈ Term`;
+        }
+    }
+
+    function buildTree(node, currentDepth = 1) {
+        if (!node || currentDepth > maxDepth) return "";
+        
+        if (node.desc === "0" || node.desc === "true" || node.desc === "false") {
+            return `\\AxiomC{${getNodeLabel(node)}}`;
+        }
+    
+        let subTree = node.argument ? buildTree(node.argument, currentDepth + 1) : ""; // Only build if argument exists
+    
+        if (node.desc === "succ" || node.desc === "pred" || node.desc === "iszero") {
+            return `${subTree} ${subTree ? `\\RightLabel{(${node.desc})}\\UnaryInfC{${getNodeLabel(node)}}` : `\\AxiomC{${getNodeLabel(node)}}`}`;
+        }
+    
+        if (node.desc === "if") {
+            let conditionSubTree = node.condition ? buildTree(node.condition, currentDepth + 1) : "";
+            let thenSubTree = node.then ? buildTree(node.then, currentDepth + 1) : "";
+            let elseSubTree = node.else ? buildTree(node.else, currentDepth + 1) : "";
+    
+            return `${conditionSubTree}
+                    ${thenSubTree}
+                    ${elseSubTree}
+                    ${conditionSubTree && thenSubTree && elseSubTree ? `\\RightLabel{(${node.desc})}` : ""}
+                    ${currentDepth < maxDepth ? `\\TrinaryInfC{${getNodeLabel(node)}}` : `\\AxiomC{${getNodeLabel(node)}}`}`;
+        }
+    
+        return "";
+    }
+
+    proofTree += buildTree(tree);
+    proofTree += "\\end{prooftree}";
+    proof = proofTree;
+    return "<p>$$" + proofTree + "$$</p>";
+}
+
+let sizeLatex = "";
 function sizeCount(tree) {
     // Initialize a queue with the root node
     let queue = [tree];
     let size = 0;
-    let output = "<table border='1' style='border-collapse: collapse; width: 100%;'><tr><th>Kalkulácia veľkosti</th></tr>"; // Initialize the table
+    let output = `<p>Kalkulácia veľkosti<br>$$ \\begin{align} \n`; // Initialize the table
 
     while (queue.length > 0) {
         const currentLevel = [];
@@ -327,7 +359,7 @@ function sizeCount(tree) {
 
         // Process each node at the current level
         queue.forEach((node) => {
-            currentLevel.push(`Size(${node.type})`);
+            currentLevel.push(`\\text{Size}\\text{(${node.type})}`);
             currentLevelSize++; // Count the current node
 
             // Check if the node has an argument (child node) and add to nextQueue
@@ -342,7 +374,7 @@ function sizeCount(tree) {
         // Prepare the row for the current level
         const currentLevelString = currentLevel.join(' + ');
         const sizeCalculation = size === 0 ? currentLevelString : `${currentLevelString} + ${size}`;
-        output += `<tr><td>${size === 0 ? sizeCalculation : `= ${sizeCalculation}`}</td></tr>`;
+        output += size === 0 ?` & ${sizeCalculation} \\\\ \n`: `&= ${sizeCalculation} \\\\ \n`;
             
         // Update the total size count
         size += currentLevelSize;
@@ -352,16 +384,15 @@ function sizeCount(tree) {
     }
 
     // Final output with total size
-    output += `<tr style='color: red'><td>= ${size}</td></tr>`;
-    
-    // Write the output to the div
-    document.getElementById("size").innerHTML = output + "</table>"; // Close the table
+    output += ` &= ${size} \n\\end{align} $$ </p>`;
+    document.getElementById("size").innerHTML = output;
 }
 
+let conLatex = "";
 function conCount(tree) {
     // Initialize a queue with the root node
     let queue = [tree];
-    let output = "<table border='1' style='border-collapse: collapse; width: 100%;'><tr><th>Kalkulácia počtu konštánt</th></tr>"; // Initialize the table
+    let output = `Kalkulácia počtu konštánt<br>\\begin{align} \n`; // Initialize the table
     let constants = [];
     let count = 0;
     while (queue.length > 0) {
@@ -370,7 +401,7 @@ function conCount(tree) {
         let newConstants = [];
         // Process each node at the current level
         queue.forEach((node) => {
-            currentLevel.push(`Con(${node.type})`);
+            currentLevel.push(`\\text{Con}\\text{(${node.type})}`);
 
             // Check for constants
             if (node.type === "0") {
@@ -394,11 +425,12 @@ function conCount(tree) {
         const currentLevelString = currentLevel.join(' ∪ ');
 
         // Generate a string for constants, showing each constant separately
-        const constantsString = constants.length > 0 ? constants.map(constant => `∪ {${constant}}`).join(' ') : '';
+        const constantsString = constants.length > 0 ? constants.map(constant => `∪ \\lbrace${constant === "true" || constant === "false" ? `\\text{${constant}}` : constant}\\rbrace`).join(' ') : '';
+
 
         // Combine current level calculation with constants
         const constantCalculation = `${currentLevelString}${constantsString}`;
-        output += `<tr><td>${count === 0 ? constantCalculation : `= ${constantCalculation}`}</td></tr>`;
+        output += `& ${count === 0 ? constantCalculation : `= ${constantCalculation}`}\\\\ \n`;
         count++;
         for (let i = 0; i < newConstants.length; i++) {
             constants.push(newConstants[i]);
@@ -410,40 +442,9 @@ function conCount(tree) {
     // Final output with unique constants
     const uniqueConstants = Array.from(new Set(constants)); // To ensure unique constants in final output
     const finalConstantString = uniqueConstants.length > 0 ? `{${uniqueConstants.join(',')}}` : '{}';
-    output += `<tr style='color: red'><td>= ${finalConstantString}</td></tr>`; // Final unique constants
+    output += `& = \\lbrace \\text${finalConstantString} \\rbrace \n\\end{align}`; // Final unique constants
 
-    // Write the output to the div
-    document.getElementById("constants").innerHTML = output + "</table>"; // Close the table
-}
-
-function removeUnnecessaryParentheses(expression) {
-    return expression
-        .replace(/\(\s*([0-9]+)\s*\)/g, '$1')  // Remove parentheses around numbers
-        .replace(/\(\s*(true|false)\s*\)/g, '$1') // Remove parentheses around boolean values
-        .replace(/pred \(\s*([0-9]+)\s*\)/g, 'pred $1') // Remove unnecessary parentheses after pred
-        .replace(/succ \(\s*([0-9]+)\s*\)/g, 'succ $1') // Remove unnecessary parentheses after succ
-        .replace(/iszero \(\s*([0-9]+)\s*\)/g, 'iszero $1'); // Remove unnecessary parentheses after iszero
-}
-
-function removeUnnecessaryParentheses2(expr) {
-    let i = 0;
-    while (i < expr.length) {
-        if (expr[i] === '(') {
-            try {
-                // Find the matching closing parenthesis
-                const closingIdx = findClosingParenthesis(expr, i);
-                // Skip to the character after the closing parenthesis
-                i = closingIdx + 1;
-            } catch (error) {
-                // If there's no matching closing parenthesis, remove the unmatched opening parenthesis
-                expr = expr.slice(0, i) + expr.slice(i + 1);
-                // Don't reset i, continue from the current position
-            }
-        } else {
-            i++;  // Move to the next character if it's not an opening parenthesis
-        }
-    }
-    return expr;
+    document.getElementById("constants").innerHTML = `<p>${output}</p>`; // Close the table
 }
 
 let condition_nodes = [];
@@ -452,8 +453,7 @@ function calculateConditionalDepth(node_condition, node_then, node_else, depths,
     let firstDepth = updateDepth(node_condition, 0, depths, closed, depth, depth_output, node_then, node_else);
     let secondDepth = updateDepth(node_then, 1, depths, closed, depth, depth_output, node_condition, node_else);
     let thirdDepth = updateDepth(node_else, 2, depths, closed, depth, depth_output, node_condition,node_then);
-
-    depth_output.push(`<tr><td>= max(${firstDepth}, ${secondDepth}, ${thirdDepth})${depth !== 0 ? ' + ' + depth : ''}</td></tr>`);
+    depth_output.push(`& = \\text{max(${firstDepth}, ${secondDepth}, ${thirdDepth})${depth !== 0 ? ' + ' + depth : ''}} \\\\ \n`);
 
     if (node_condition.argument) {
         depths[0]++;
@@ -463,7 +463,7 @@ function calculateConditionalDepth(node_condition, node_then, node_else, depths,
             depths[0]++;
             closed[0] = true;
             firstDepth = `${depths[0]}`;
-            depth_output.push(`<tr><td>= max(${firstDepth}, ${secondDepth}, ${thirdDepth})${depth !== 0 ? ' + ' + depth : ''}</td></tr>`);
+            depth_output.push(`& = \\text{max(${firstDepth}, ${secondDepth}, ${thirdDepth})${depth !== 0 ? ' + ' + depth : ''}} \\\\ \n`);
 
         }
     }
@@ -476,7 +476,7 @@ function calculateConditionalDepth(node_condition, node_then, node_else, depths,
             depths[1]++;
             closed[1] = true;
             secondDepth = `${depths[1]}`;
-            depth_output.push(`<tr><td>= max(${firstDepth}, ${secondDepth}, ${thirdDepth})${depth !== 0 ? ' + ' + depth : ''}</td></tr>`);
+            depth_output.push(`& = \\text{max(${firstDepth}, ${secondDepth}, ${thirdDepth})${depth !== 0 ? ' + ' + depth : ''}} \\\\ \n`);
 
         }
     }
@@ -489,16 +489,16 @@ function calculateConditionalDepth(node_condition, node_then, node_else, depths,
             depths[2]++;
             closed[2] = true;
             thirdDepth = `${depths[2]}`;
-            depth_output.push(`<tr><td>= max(${firstDepth}, ${secondDepth}, ${thirdDepth})${depth !== 0 ? ' + ' + depth : ''}</td></tr>`);
+            depth_output.push(`& = \\text{max(${firstDepth}, ${secondDepth}, ${thirdDepth})${depth !== 0 ? ' + ' + depth : ''}} \\\\ \n`);
 
         }
 
         const biggest = Math.max(...depths);
         if (depth !== 0) {
-            depth_output.push(`<tr><td>= ${biggest} + ${depth}</td></tr>`);
-            depth_output.push(first ? `<tr style='color: red'><td>= ${biggest + depth}</td></tr>` : `<tr><td>= ${biggest + depth}</td></tr>`);
+            depth_output.push(`& = ${biggest} + ${depth} \\\\ \n`);
+            depth_output.push(first ? `& = ${biggest + depth} \\\\ \n` : `& = ${biggest + depth} \\\\ \n`);
         } else {
-            depth_output.push(first ? `<tr style='color: red'><td>= ${biggest}</td></tr>` : `<tr><td>= ${biggest}</td></tr>`);
+            depth_output.push(first ? `& = ${biggest} \\\\ \n` : `& = ${biggest} \\\\ \n`);
         }        
 
         if (first && condition_nodes) {
@@ -528,16 +528,16 @@ function calculateConditionalDepth(node_condition, node_then, node_else, depths,
             for (let [type, index] of Object.entries(lastIndices)) {
                 let color = typeColors[type];
                 let targetLine = depth_output[index];
-                targetLine = targetLine.replace(`${type}`, `<span style="color:${color}">${type}</span>`);
+                targetLine = targetLine.replace(`${type}`, `}\\textcolor{${color}}{\\text{${type}}}\\text{`);
                 depth_output[index] = targetLine;
             }       
 
             // Process each conditionNode as before
             for (let conditionNode of condition_nodes) {
-                depth_output.push(`<tr><td> </td></tr>`); 
+                depth_output.push(`& \\text{--------------} \\\\ \n`); 
             
                 // Push the depth with color-coded condition type
-                depth_output.push(`<tr><td>depth(<span style="color:${typeColors[conditionNode.type]}">${conditionNode.type}</span>)</td></tr>`);
+                depth_output.push(`& \\text{depth(}\\textcolor{${typeColors[conditionNode.type]}}{\\text{${conditionNode.type}}}) \\\\ \n`);
                 /* depth_output.push(`<tr><td>depth(${conditionNode.type})</td></tr>`); */
                 calculateDepth(conditionNode, depth = 0, depth_output)
             }
@@ -552,15 +552,15 @@ function updateDepth(node, index, depths, closed, depth, depth_output, node2, no
             if(index === 0) {
                 let secondDepth = updateDepth(node2, 1, depths, closed);
                 let thirdDepth = updateDepth(node3, 2, depths, closed);
-                depth_output.push(`<tr><td>= max(depth(${node.type})${depths[0] !== 0 ? ' + ' + depths[0] : ''}, ${secondDepth}, ${thirdDepth})${depth !== 0 ? ' + ' + depth : ''}</td></tr>`);
+                depth_output.push(`& = \\text{max(depth(${node.type})${depths[0] !== 0 ? ' + ' + depths[0] : ''}, ${secondDepth}, ${thirdDepth})${depth !== 0 ? ' + ' + depth : ''}} \\\\ \n`);
             } else if (index === 1) {
                 let firstDepth = updateDepth(node2, 0, depths, closed);
                 let thirdDepth = updateDepth(node3, 2, depths, closed);
-                depth_output.push(`<tr><td>= max(${firstDepth}, depth(${node.type})${depths[1] !== 0 ? ' + ' + depths[1] : ''}, ${thirdDepth})${depth !== 0 ? ' + ' + depth : ''}</td></tr>`);
+                depth_output.push(`& = \\text{max(${firstDepth}, depth(${node.type})${depths[1] !== 0 ? ' + ' + depths[1] : ''}, ${thirdDepth})${depth !== 0 ? ' + ' + depth : ''}} \\\\ \n`);
             } else {
                 let firstDepth = updateDepth(node2, 0, depths, closed);
                 let secondDepth = updateDepth(node3, 1, depths, closed);
-                depth_output.push(`<tr><td>= max(${firstDepth}, ${secondDepth}, depth(${node.type})${depths[2] !== 0 ? ' + ' + depths[2] : ''})${depth !== 0 ? ' + ' + depth : ''}</td></tr>`);
+                depth_output.push(`& = \\text{max(${firstDepth}, ${secondDepth}, depth(${node.type})${depths[2] !== 0 ? ' + ' + depths[2] : ''})${depth !== 0 ? ' + ' + depth : ''}} \\\\ \n`);
             }
         }
         const depth_inner = treeDepth(node);
@@ -601,13 +601,13 @@ function treeDepth(node) {
     
 function calculateDepth(node, depth = 0 , depth_output = []) {
     while (node) {
-        if (first) depth_output.push(`<tr><td>${depth === 0 ? `depth(${node.type})` : `= depth(${node.type}) + ${depth}`}</td></tr>\n`);
+        if (first) depth_output.push(`& = \\text{${depth === 0 ? `depth(${node.type})` : `depth(${node.type}) + ${depth}`}}\\\\ \n`);
         depth++;
 
         if (node.condition) {
             let depths = [0, 0, 0];
             let closed = [false, false, false];
-            if(first) depth_output.push(`<tr><td>= max(depth(${node.condition.type}), depth(${node.then.type}), depth(${node.else.type}))${depth !== 0 ? ' + ' + depth : ''}</td></tr>`);
+            if(first) depth_output.push(`& = \\text{max(depth(${node.condition.type}), depth(${node.then.type}), depth(${node.else.type})${depth !== 0 ? ' + ' + depth : ''}} \\\\ \n`);
             return calculateConditionalDepth(node.condition, node.then, node.else, depths, closed, depth, depth_output);
         }
 
@@ -617,12 +617,43 @@ function calculateDepth(node, depth = 0 , depth_output = []) {
         }
     }
     const lastEntry = depth_output[depth_output.length - 1];
-    if (lastEntry.includes("= depth(")) {
-        depth_output.push(`<tr><td>= ${depth}</td></tr>\n`);
+    if (lastEntry.includes("& = \\text{depth(")) {
+        depth_output.push(`& = ${depth}\\\\ \n`);
     }
     return depth_output;
 }
 
+function removeUnnecessaryParentheses(expression) {
+    return expression
+        .replace(/\(\s*([0-9]+)\s*\)/g, '$1')  // Remove parentheses around numbers
+        .replace(/\(\s*(true|false)\s*\)/g, '$1') // Remove parentheses around boolean values
+        .replace(/pred \(\s*([0-9]+)\s*\)/g, 'pred $1') // Remove unnecessary parentheses after pred
+        .replace(/succ \(\s*([0-9]+)\s*\)/g, 'succ $1') // Remove unnecessary parentheses after succ
+        .replace(/iszero \(\s*([0-9]+)\s*\)/g, 'iszero $1'); // Remove unnecessary parentheses after iszero
+}
+
+function removeUnnecessaryParentheses2(expr) {
+    let i = 0;
+    while (i < expr.length) {
+        if (expr[i] === '(') {
+            try {
+                // Find the matching closing parenthesis
+                const closingIdx = findClosingParenthesis(expr, i);
+                // Skip to the character after the closing parenthesis
+                i = closingIdx + 1;
+            } catch (error) {
+                // If there's no matching closing parenthesis, remove the unmatched opening parenthesis
+                expr = expr.slice(0, i) + expr.slice(i + 1);
+                // Don't reset i, continue from the current position
+            }
+        } else {
+            i++;  // Move to the next character if it's not an opening parenthesis
+        }
+    }
+    return expr;
+}
+
+let evalLatex = "";
 function evaluateExpression(expression) {
     let steps = [];
     let currentExpression = expression;
@@ -688,34 +719,86 @@ function evaluateExpression(expression) {
 
     steps.push(currentExpression);
 
-    let tableHTML = '<table border="1" style="border-collapse: collapse; width: 100%;">';
-    tableHTML += '<tr><th>Evaluácia termu</th></tr>';
+    let latexHTML = '<p>Evaluácia termu<br>\\begin{align} \\\\ \n';
     let i = 0;
     steps.forEach((step, index) => {
         if (index < steps.length - 1) {
             if (i == 0) {
-                tableHTML += `<tr><td>${step}</td></tr>`;
+                latexHTML += `& \\text{${step}} \\\\ \n`;
                 i++;
             } else {
-                tableHTML += `<tr><td>-> ${step}</td></tr>`;
+                latexHTML += `& -> \\text{${step}} \\\\ \n`;
             }
         }
     });
-    tableHTML += '</table>';
-    document.getElementById('evaluate').innerHTML = tableHTML;
+    latexHTML += '\\end{align}</p>';
+    document.getElementById('evaluate').innerHTML = latexHTML;
 }
 
-document.getElementById("typingCheckbox").addEventListener("change", function() {
-    const typeSelect = document.getElementById("typeSelect");
+function addPercentToRows(latexCode, x) {
+    // Split the LaTeX code into lines
+    const lines = latexCode.split('\n');
     
-    if (this.checked) {
-        typeSelect.style.display = "inline";  // Show the type selection when checkbox is checked
-    } else {
-        typeSelect.style.display = "none";    // Hide the type selection when checkbox is unchecked
+    // Add "%" at the beginning of each line starting from row x to the second-to-last row
+    for (let i = x - 1; i < lines.length - 1; i++) {
+      lines[i] = "%" + lines[i];
     }
-});
+    
+    // Join the lines back together and return the modified LaTeX code
+    return lines.join('\n');
+}
 
+function removeFirstPercent(text) {
+    // Find the index of the first occurrence of "%"
+    const index = text.indexOf('%');
+    
+    // If "%" is found, remove it and return the updated string
+    if (index !== -1) {
+      return text.slice(0, index) + text.slice(index + 1);
+    }
+    
+    // If "%" is not found, return the original string
+    return text;
+}
 
+function displayTree(level){
+    const visualizationContainer = document.getElementById('visualization');
+    if (type === "Bool" || type === "Nat") {
+        treeData = createTreeWithTypes(tokenizedExpression, type);
+        visualizationContainer.innerHTML = generateProofTree(treeData, document.getElementById("stepCheckbox").checked ? level : 1000);
+        if (document.getElementById("stepCheckbox").checked) {
+            document.getElementById('visualButton').style.display = 'block';
+        }
+    } else if (type === "?") {
+        if (document.getElementById("stepCheckbox").checked) {
+            visualizationContainer.innerHTML = "Vypni krokovanie"
+        } else {
+            treeData = createTreeWithTypes(tokenizedExpression, "Nat");
+            generateProofTree(treeData, document.getElementById("stepCheckbox").checked ? level : 1000);
+            if (wrongTyped) {
+                treeData = createTreeWithTypes(tokenizedExpression, "Bool");
+                generateProofTree(treeData, document.getElementById("stepCheckbox").checked ? level : 1000);
+                if (wrongTyped) {
+                    visualizationContainer.innerHTML = "Pre daný term neexistuje typ"
+                } else {
+                    visualizationContainer.innerHTML = generateProofTree(treeData, document.getElementById("stepCheckbox").checked ? level : 1000);
+                }
+            } else {
+            visualizationContainer.innerHTML = generateProofTree(treeData, document.getElementById("stepCheckbox").checked ? level : 1000);
+            }
+        }
+   } else {
+        treeData = createTree(tokenizedExpression);
+        visualizationContainer.innerHTML = generateProofTree(treeData, document.getElementById("stepCheckbox").checked ? level : 1000);
+        if (document.getElementById("stepCheckbox").checked) {
+            document.getElementById('visualButton').style.display = 'block';
+        }
+    }
+    console.log(type);
+}
+
+let tokenizedExpression;
+let tmpType;
 document.getElementById("drawTree").addEventListener("click", () => {
     const expression = document.getElementById("expressionInput").value.trim();
     const visualizationContainer = document.getElementById('visualization');
@@ -723,32 +806,49 @@ document.getElementById("drawTree").addEventListener("click", () => {
     const conContainer = document.getElementById('constants');
     const depthContainer = document.getElementById('depth');
     const evaluationContainer = document.getElementById('evaluate');
-
+    document.getElementById('sizeButton').style.display = 'none';
+    document.getElementById('conButton').style.display = 'none';
+    document.getElementById('evalButton').style.display = 'none';
+    document.getElementById('visualButton').style.display = 'none';
     if (expression) {
+        condition_nodes = [];
+        first = true;
+        start_i = 0;
+        visualizationContainer.innerHTML = "";
+        evaluationContainer.innerHTML = "";
+        sizeLatex = "";
+        conLatex = "";
+        evalLatex = "";
+        tokenizedExpression = "";
+        level = 1;
         try {
-            visualizationContainer.innerHTML = "";
-            const tokenizedExpression = tokenize(expression);
-            if (document.getElementById("typingCheckbox").checked) {
-                const expectedType = document.getElementById("typeSelect").value;
-                treeData = createTreeWithTypes(tokenizedExpression, expectedType);
-            } else {
-                treeData = createTree(tokenizedExpression);
-            }
+            tokenizedExpression = tokenize(expression);
+            
+            displayTree(level);
 
-            visualizationContainer.innerHTML = generateProofTree(treeData);
-            MathJax.typesetPromise();
-            console.log(generateProofTree(treeData));
             treeDataNew = createTree(tokenizedExpression);
             sizeCount(treeDataNew);
             conCount(treeDataNew);
-
-            condition_nodes = [];
-            first = true;
-            const depth_output = calculateDepth(treeDataNew);
-            depthContainer.innerHTML = `<table><tr><th>Kalkulácia hĺbky</th></tr>${depth_output.join("")}</table>`;
-            start;
-            start_i = 0;
-            evaluateExpression(tokenize(start));
+            depthContainer.innerHTML = `<p>Kalkulácia hĺbky<br>\\begin{align}\n` + calculateDepth(treeDataNew).join("") + `\\end{align} </p>`;
+            if(wrongTyped == false) {
+                tmpType = type; 
+                evaluateExpression(tokenize(start)); 
+                type = tmpType;
+            }
+            if (document.getElementById("stepCheckbox").checked) {
+                sizeContainer.innerHTML = addPercentToRows(sizeContainer.innerHTML, 3);
+                conContainer.innerHTML = addPercentToRows(conContainer.innerHTML, 3);
+                document.getElementById('sizeButton').style.display = 'block';
+                document.getElementById('conButton').style.display = 'block';
+                sizeLatex = sizeContainer.innerHTML;
+                conLatex = conContainer.innerHTML;
+                if(wrongTyped == false) {
+                    evaluationContainer.innerHTML = addPercentToRows(evaluationContainer.innerHTML, 3);
+                    document.getElementById('evalButton').style.display = 'block';
+                    evalLatex = evaluationContainer.innerHTML;
+                }
+            }
+            MathJax.typeset();
         } catch (error) {
             alert(error.message);
             visualizationContainer.innerHTML = "";
@@ -758,7 +858,43 @@ document.getElementById("drawTree").addEventListener("click", () => {
             evaluationContainer.innerHTML = "";
         }
     } else {
-        // Catch any error and display the actual error message in the alert
         alert("chyba");
     }
 });
+
+let level = 1;
+document.getElementById("visualButton").addEventListener("click", () => {
+    level++;
+    displayTree(level);
+    MathJax.typeset();
+});
+
+document.getElementById("sizeButton").addEventListener("click", () => {
+    sizeLatex = removeFirstPercent(sizeLatex);
+    document.getElementById('size').innerHTML = sizeLatex;
+    MathJax.typeset();
+});
+
+document.getElementById("conButton").addEventListener("click", () => {
+    conLatex = removeFirstPercent(conLatex);
+    document.getElementById('constants').innerHTML = conLatex;
+    MathJax.typeset();
+});
+
+document.getElementById("evalButton").addEventListener("click", () => {
+    evalLatex = removeFirstPercent(evalLatex);
+    document.getElementById('evaluate').innerHTML = evalLatex;
+    MathJax.typeset();
+});
+
+/*document.getElementById("saveButton").addEventListener("click", function () {
+    // Create the URL to generate the image
+   const imageUrl = "https://math.vercel.app?bgcolor=auto&from=" + encodeURIComponent(proof);
+   const download = document.getElementById('download');
+   // Create a new image element
+   const img = new Image();
+   img.src = imageUrl;  // Set the source of the image
+   img.alt = "Generated Image";  // Set alt text for the image
+
+   document.getElementById('download').appendChild(img);
+});*/

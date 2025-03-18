@@ -6,7 +6,6 @@
     <title>Jazyk čísel a pravdivostných hodnôt</title>
     <link rel="stylesheet" href="styles.css">
     <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
-
     <script type="text/javascript">
         window.MathJax = {
             loader: {
@@ -17,6 +16,7 @@
             }
         };
     </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.js"></script>
 </head>
 <body>
     <h1>Jazyk čísel a pravdivostných hodnôt</h1>
@@ -24,16 +24,10 @@
     <input type="text" id="expressionInput" placeholder="Zadaj výraz (napr. (if (iszero (pred (succ 0))) then true else false))" autocomplete="off"/>
 
     <label style="display: flex; align-items: center; margin-left: 10px;">
-    <input type="checkbox" id="typingCheckbox" style="margin-right: 5px;" /> Typovanie
+        <input type="checkbox" id="stepCheckbox" style="margin-right: 5px;" /> Krokovanie
     </label>
-
-    <select id="typeSelect" style="display: none; margin-left: 10px;">
-    <option value="Nat">Nat</option>
-    <option value="Bool">Bool</option>
-    </select>
     </div>
     <button id="drawTree">Vypracuj</button>
-
     <div>pred( succ( if iszero( succ 0) then pred( if iszero( pred 0) then false else true) else ( if iszero 0 then (if true then true else false) else true)))</div> 
     <div>pred( succ( if iszero( succ 0) then ( if iszero( pred 0) then false else true) else ( if iszero 0 then (if true then true else false) else true)))</div>
     <div>succ ( succ ( if iszero ( succ 0 ) then true else false ) )</div>
@@ -43,10 +37,17 @@
     <div>pred(succ 0)</div>
 
     <div id="visualization"></div>
+    <button id="visualButton" hidden>Ďalši krok</button>
+    <!---<button id="saveButton">Save as Image</button>--->
     <div id="size"></div>
+    <button id="sizeButton" hidden>Ďalši krok</button>
     <div id="constants"></div>
+    <button id="conButton" hidden>Ďalši krok</button>
     <div id="depth"></div>
     <div id="evaluate"></div>
+    <button id="evalButton" hidden>Ďalši krok</button>
+
+    <!---<div id="download"></div>--->
     <script src="script.js"></script>
 </body>
 </html>
