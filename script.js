@@ -212,7 +212,7 @@ function createTree(expression) {
     }
 
     // If none of the above matches, throw an error
-    throw new Error(`Neznámy term: ${expression}, pravdepodobne spôsobený nesprávnym zátvorkovaním.`);
+    throw new Error(`Neznámy term: ${expression}.`);
 }
 
 function createTreeWithTypes(expression, expectedType) {
@@ -290,7 +290,7 @@ function createTreeWithTypes(expression, expectedType) {
         return tree;
     }
 
-    throw new Error(`Neznámy term: ${expression}, pravdepodobne spôsobený nesprávnym zátvorkovaním.`);
+    throw new Error(`Neznámy term: ${expression}.`);
 }
 
 let wrongTyped = false;
