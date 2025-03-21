@@ -888,7 +888,7 @@ function displayTree(level){
         }
     } else if (type === "?") {
         if (document.getElementById("stepCheckbox").checked) {
-            visualizationContainer.innerHTML = "Pre zobrazenie syntaktického stromu vypni krokovanie."
+            visualizationContainer.innerHTML = "Na overenie existencie typu vypni krokovanie."
         } else {
             treeData = createTreeWithTypes(tokenizedExpression, "Nat");
             generateProofTree(treeData, document.getElementById("stepCheckbox").checked ? level : 1000);
