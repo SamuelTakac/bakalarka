@@ -888,7 +888,7 @@ function displayTree(level){
         }
     } else if (type === "?") {
         if (document.getElementById("stepCheckbox").checked) {
-            visualizationContainer.innerHTML = "Na overenie existencie typu vypni krokovanie."
+            visualizationContainer.innerHTML = 'Syntaktický strom <br> <span style="color: red;">Chyba : Na overenie existencie typu vypni krokovanie.</span>';
         } else {
             treeData = createTreeWithTypes(tokenizedExpression, "Nat");
             generateProofTree(treeData, document.getElementById("stepCheckbox").checked ? level : 1000);
@@ -982,7 +982,7 @@ document.getElementById("drawTree").addEventListener("click", () => {
             document.getElementById('conButton').style.display = 'none';
             document.getElementById('visualButton').style.display = 'none';
             document.getElementById('depthButton').style.display = 'none';
-            visualizationContainer.innerHTML = `Chyba : ` + error.message;
+            visualizationContainer.innerHTML = `<span style="color: red;">Chyba: ${error.message}</span>`;
         }
     } else {
         visualizationContainer.innerHTML = `Chyba : Zadaj výraz.`
