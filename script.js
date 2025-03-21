@@ -553,8 +553,7 @@ function calculateConditionalDepth(node_condition, node_then, node_else, depths,
             }));
 
             for (let sortedLine of sortedLines) {
-                depth_output.push(`& \\textcolor{red}{\\text{Pomocný výpočet}} \\\\ \n`);
-                depth_output.push(`& \\text{depth(}${sortedLine.modifiedPart}) \\\\ \n`);
+                depth_output.push(`& \\textcolor{red}{\\text{Pomocný výpočet : }}\\text{depth(}${sortedLine.modifiedPart}) \\\\ \n`);
                 calculateDepth(sortedLine.node, depth = 0, depth_output);
 
                 vypocetPomocny++;
