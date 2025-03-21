@@ -19,35 +19,86 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.js"></script>
 </head>
 <body>
-    <h1>Jazyk čísel a pravdivostných hodnôt</h1>
-    <div style="display: flex; align-items: center;">
-    <input type="text" id="expressionInput" placeholder="Zadaj výraz (napr. (if (iszero (pred (succ 0))) then true else false))" autocomplete="off"/>
+    <nav class="navbar">
+        <div class="navbar-logo">
+            <span class="site-title">Vizualizácia a emulácia vlastností syntaxe a sémantiky jednoduchého funkcionálneho jazyka</span>
+        </div>
+    </nav>
 
-    <label style="display: flex; align-items: center; margin-left: 10px;">
-        <input type="checkbox" id="stepCheckbox" style="margin-right: 5px;" /> Krokovanie
-    </label>
+
+    <div class = "container">
+        <h1>Jazyk čísel a pravdivostných hodnôt</h1>
+        <p class="description">
+            <span class="extra">Zadaj výraz, ktorý chceš vyhodnotiť. <div class="help-section">
+                <button id="helpButton" class="cute-button3">Help</button>
+            </div></span>
+        </p>
+
+        <div class="editor-container">
+            <textarea id="expressionInput" placeholder="napr. if (iszero (pred (succ 0))) then true else false" autocomplete="off"></textarea>
+        </div>
+        <div class="actions-container">
+            <label class="checkbox-label">
+                <input type="checkbox" id="stepCheckbox" class="checkbox" /> Krokovanie
+            </label>
+            <button id="drawTree" class="cute-button">Vypracuj</button>
+        </div>
+        
+        <div class="zoom-header">
+            <span class="zoom-label">Zoom</span>
+            <select id="sel" class="select">
+                <option value="0.3">30%</option>
+                <option value="0.5">50%</option>
+                <option value="0.75">75%</option>
+                <option value="0.85">85%</option>
+                <option value="0.9">90%</option>
+                <option value="1" selected>100%</option>
+                <option value="1.2">120%</option>
+                <option value="1.5">150%</option>
+            </select>
+        </div>
+
+        <div class="results-container">
+            <div class="zoom-content">
+                <div id="helpText" class="help-text" style="display: none;">
+                <h2>Help</h2>
+                <p>Tento nástroj vám umožňuje vizualizovať a vyhodnocovať výrazy jednoduchého funkcionálneho jazyka.</p>
+                <p>Na vyhodnotenie netypovaného výrazu stačí zadať samotný výraz.</p>
+                <p>Na vyhodnotenie typovaného výrazu treba za výrazom zadať jeho typ v tvare ": nat" alebo ": bool".</p>
+                <p>Na overenie existencie typu môžete za výrazom zadať ": ?". (nesmie byť zapnuté "Krokovanie")</p>
+                <p>Po zadaní výrazu stlačte tlačidlo "Vypracuj".</p>
+                <p>Môžete tiež zapnúť možnosť "Krokovanie", a postupne zobrazovať riešenia po krokoch.</p>
+                <p>Na prispôsobenie zobrazenia môžete využiť možnosť "Zoom".</p>
+                </div>
+                <div id="visualization"></div>
+                
+                <div class="button-container">
+                    <button id="visualButton" class="cute-button2" hidden>Ďalši krok</button>
+                </div>
+        
+                <div id="size"></div>
+                <div class="button-container">
+                    <button id="sizeButton" class="cute-button2" hidden>Ďalši krok</button>
+                </div>
+        
+                <div id="constants"></div>
+                <div class="button-container">
+                    <button id="conButton" class="cute-button2" hidden>Ďalši krok</button>
+                </div>
+        
+                <div id="depth"></div>
+                <div class="button-container">
+                    <button id="depthButton" class="cute-button2" hidden>Ďalši krok</button>
+                </div>
+        
+                <div id="evaluate"></div>
+                <div class="button-container">
+                    <button id="evalButton" class="cute-button2" hidden>Ďalši krok</button>
+                </div>
+            </div>
+        </div>
+        
     </div>
-    <button id="drawTree">Vypracuj</button>
-    <div>pred( succ( if iszero( succ 0) then pred( if iszero( pred 0) then false else true) else ( if iszero 0 then (if true then true else false) else true)))</div> 
-    <div>pred( succ( if iszero( succ 0) then ( if iszero( pred 0) then false else true) else ( if iszero 0 then (if true then true else false) else true)))</div>
-    <div>succ ( succ ( if iszero ( succ 0 ) then true else false ) )</div>
-    <div>pred (if iszero(pred 0) then pred 0 else false) </div>
-    <div>if 0 then 0 else 0</div> 
-    <div>if iszero 0 then 0 else true</div>
-    <div>pred(succ 0)</div>
-
-    <div id="visualization"></div>
-    <button id="visualButton" hidden>Ďalši krok</button>
-    <!---<button id="saveButton">Save as Image</button>--->
-    <div id="size"></div>
-    <button id="sizeButton" hidden>Ďalši krok</button>
-    <div id="constants"></div>
-    <button id="conButton" hidden>Ďalši krok</button>
-    <div id="depth"></div>
-    <div id="evaluate"></div>
-    <button id="evalButton" hidden>Ďalši krok</button>
-
-    <!---<div id="download"></div>--->
     <script src="script.js"></script>
 </body>
 </html>

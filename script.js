@@ -20,13 +20,13 @@ function tokenize(expression) {
             if (lowerCase.startsWith(word, i)) {
                 if (word === ":") {
                     if (type !== null || i + 1 >= lowerCase.length) {
-                        throw new Error("Invalid type annotation position");
+                        throw new Error("Typ sa musí nachádzat za výrazom.");
                     }
 
                     // Check the next token for a valid type
                     const nextToken = keywords.find(kw => lowerCase.startsWith(kw, i + 1));
                     if (!typeAnnotations.includes(nextToken)) {
-                        throw new Error(`Invalid type annotation ${nextToken}`);
+                        throw new Error("Neznámy typ.");
                     }
                     type = nextToken;
                     i += (":" + nextToken).length; // Move past ":type"
@@ -35,7 +35,7 @@ function tokenize(expression) {
                 } 
 
                 if (type !== null) {
-                    throw new Error("Type annotation must be at the end");
+                    throw new Error("Typ sa musí nachádzat za výrazom.");
                 }
 
                 result.push(word); // Add the matched word to the result
@@ -46,7 +46,7 @@ function tokenize(expression) {
         }
 
         if (!matched) {
-            throw new Error(`Unknown token starting at index ${i}`);
+            throw new Error(`Vo výraze sa nachádza neznámy term.`);
         }
     }
     if (type === "nat") {
@@ -103,7 +103,7 @@ function findClosingParenthesis(expr, startIdx) {
             if (depth === 0) {
                 // Check for any characters after the closing parenthesis
                 if (i < expr.length - 1) {
-                    throw new Error("Invalid expression: unexpected characters after closing parenthesis.");
+                    throw new Error("Nesprávne zátvorkovanie.");
                 }
                 return i; // Found the matching closing parenthesis
             }
@@ -153,7 +153,7 @@ function createTree(expression) {
     if (expression.startsWith("succ")) {
         const nextSegment = expression.slice(5).trim();
         const nextChar = nextSegment.charAt(0);
-        if(nextChar === "") throw new Error();
+        if(nextChar === "") throw new Error("Za 'succ' musí následovať 0 alebo ďalší term.");
        /* // Check if the next character is '(', '0', or if the next word is "true" or "false"
         if (nextChar !== '(' && nextChar !== '0' && !nextSegment.startsWith("true") && !nextSegment.startsWith("false")) {
             throw new Error();
@@ -169,7 +169,7 @@ function createTree(expression) {
     if (expression.startsWith("pred")) {
         const nextSegment = expression.slice(5).trim();
         const nextChar = nextSegment.charAt(0);
-        if(nextChar === "") throw new Error();
+        if(nextChar === "") throw new Error("Za 'pred' musí následovať 0 alebo ďalší term.");
         // Check if the next character is '(', '0', or if the next word is "true" or "false"
         /*if (nextChar !== '(' && nextChar !== '0' && !nextSegment.startsWith("true") && !nextSegment.startsWith("false")) {
             throw new Error();
@@ -185,7 +185,7 @@ function createTree(expression) {
     if (expression.startsWith("iszero")) {
         const nextSegment = expression.slice(7).trim();
         const nextChar = nextSegment.charAt(0);
-        if(nextChar === "") throw new Error();
+        if(nextChar === "") throw new Error("Za 'iszero' musí následovať 0 alebo ďalší term.");
         /*// Check if the next character is '(', '0', or if the next word is "true" or "false"
         if (nextChar !== '(' && nextChar !== '0' && !nextSegment.startsWith("true") && !nextSegment.startsWith("false")) {
             throw new Error();
@@ -212,7 +212,7 @@ function createTree(expression) {
     }
 
     // If none of the above matches, throw an error
-    throw new Error(`Invalid expression: ${expression}`);
+    throw new Error(`Neznámy term: ${expression}, pravdepodobne spôsobený nesprávnym zátvorkovaním.`);
 }
 
 function createTreeWithTypes(expression, expectedType) {
@@ -290,7 +290,7 @@ function createTreeWithTypes(expression, expectedType) {
         return tree;
     }
 
-    throw new Error(`Invalid expression: ${expression}`);
+    throw new Error(`Neznámy term: ${expression}, pravdepodobne spôsobený nesprávnym zátvorkovaním.`);
 }
 
 let wrongTyped = false;
@@ -342,7 +342,7 @@ function generateProofTree(tree, maxDepth) {
     proofTree += buildTree(tree);
     proofTree += "\\end{prooftree}";
     proof = proofTree;
-    return "<p>$$" + proofTree + "$$</p>";
+    return "<p>Syntaktický strom $$" + proofTree + "$$</p>";
 }
 
 let sizeLatex = "";
@@ -447,8 +447,10 @@ function conCount(tree) {
     document.getElementById("constants").innerHTML = `<p>${output}</p>`; // Close the table
 }
 
+let vypocetPomocny = 0;
 let condition_nodes = [];
 let first = true;
+let depthLatex = "";
 function calculateConditionalDepth(node_condition, node_then, node_else, depths, closed, depth, depth_output) {
     let firstDepth = updateDepth(node_condition, 0, depths, closed, depth, depth_output, node_then, node_else);
     let secondDepth = updateDepth(node_then, 1, depths, closed, depth, depth_output, node_condition, node_else);
@@ -503,7 +505,7 @@ function calculateConditionalDepth(node_condition, node_then, node_else, depths,
 
         if (first && condition_nodes) {
             first = false;
-            const colors = ["blue", "green", "purple", "orange", "brown", "pink", "teal", "cyan", "lime"]; // Expand if needed
+            const colors = ["blue", "green", "purple", "orange", "brown", "pink", "teal", "cyan", "lime"];
             const typeColors = {}; // Store assigned colors for each unique type
             let colorIndex = 0;
 
@@ -525,26 +527,141 @@ function calculateConditionalDepth(node_condition, node_then, node_else, depths,
                     }
                 }
             }
+
+            let lines = [];
             for (let [type, index] of Object.entries(lastIndices)) {
                 let color = typeColors[type];
                 let targetLine = depth_output[index];
-                targetLine = targetLine.replace(`${type}`, `}\\textcolor{${color}}{\\text{${type}}}\\text{`);
+                const replacedPart = `}\\textcolor{${color}}{\\text{${type}}}\\text{`;
+                targetLine = targetLine.replace(`${type}`, replacedPart);
                 depth_output[index] = targetLine;
-            }       
+                const modifiedPart = replacedPart.slice(1, replacedPart.length-6);
+                lines.push({ node: condition_nodes.find(node => node.type === type), modifiedPart });
+            }
 
-            // Process each conditionNode as before
-            for (let conditionNode of condition_nodes) {
-                depth_output.push(`& \\text{--------------} \\\\ \n`); 
+            lines.sort((a, b) => {
+                const aIndex = condition_nodes.findIndex(node => node.type === a.node.type);
+                const bIndex = condition_nodes.findIndex(node => node.type === b.node.type);
+                return aIndex - bIndex;
+            });
+
+            let sortedLines = modifyLinesByDependency(lines);
             
-                // Push the depth with color-coded condition type
-                depth_output.push(`& \\text{depth(}\\textcolor{${typeColors[conditionNode.type]}}{\\text{${conditionNode.type}}}) \\\\ \n`);
-                /* depth_output.push(`<tr><td>depth(${conditionNode.type})</td></tr>`); */
-                calculateDepth(conditionNode, depth = 0, depth_output)
+            let orderedLastIndices = condition_nodes.map(node => ({
+                type: node.type,
+                index: lastIndices[node.type] ?? -1
+            }));
+
+            for (let sortedLine of sortedLines) {
+                depth_output.push(`& \\textcolor{red}{\\text{Pomocný výpočet}} \\\\ \n`);
+                depth_output.push(`& \\text{depth(}${sortedLine.modifiedPart}) \\\\ \n`);
+                calculateDepth(sortedLine.node, depth = 0, depth_output);
+
+                vypocetPomocny++;
+                const presun = extractPomocnyVypocetFromArray(depth_output, vypocetPomocny);
+
+                let type = sortedLine.node.type;  // Get the type from the current sorted line
+
+                const updatedIndices = updateIndices(orderedLastIndices);
+                const matchingEntry = Object.values(updatedIndices).find(entry => entry.type === type);
+                let insertIndex = matchingEntry.index + 1;
+                // Insert 'presun' at the desired position
+                depth_output.splice(insertIndex, 0, presun.join(''));
+                
             }
         }
     }
     return depth_output;
 } 
+
+function updateIndices(orderedLastIndices) {
+    let new_levels = {};
+    let first = orderedLastIndices[0].index;
+
+    for (let i = 0; i < orderedLastIndices.length; i++) {
+        if (orderedLastIndices[i].index === first) {
+            new_levels[i] = { ...orderedLastIndices[i] }; // Create a new object to avoid reference issues
+        } else {
+            const plus = count_different_before(orderedLastIndices, orderedLastIndices[i]);
+            new_levels[i] = { ...orderedLastIndices[i], index: orderedLastIndices[i].index + plus };
+        }
+    }
+    
+    return new_levels; // Return the updated object
+}
+
+function count_different_before(orderedLastIndices, node) {
+    let count = 0;
+    for (let i = 0; i < orderedLastIndices.length; i++) {
+        if (orderedLastIndices[i].index !== node.index) {
+            count++;
+        } else {
+            break;
+        }
+    }
+    return count;
+}
+
+function extractPomocnyVypocetFromArray(depth_output, occurrence) {
+    let output = [];
+    let occurrenceCount = 0;
+    let found = false;
+    let removeIndices = [];
+
+    for (let i = 0; i < depth_output.length; i++) {
+        let line = depth_output[i];
+
+        if (!found) {
+            if (line.includes("Pomocný výpočet")) {
+                occurrenceCount++;
+                if (occurrenceCount === occurrence) {
+                    output.push(line);
+                    removeIndices.push(i);
+                    found = true;
+                }
+            }
+        } else {
+            if (line.includes("Pomocný výpočet")) {
+                break;
+            } else {
+                output.push(line);
+                removeIndices.push(i);
+            }
+        }
+    }
+
+    output.push(`& \\\\ \n`);
+
+    // Remove extracted lines from the original array
+    for (let i = removeIndices.length - 1; i >= 0; i--) {
+        depth_output.splice(removeIndices[i], 1);
+    }
+    return output;
+}
+
+function dependsOn(inner, outer) {
+    // Check if 'outer' type contains 'inner' type
+    return outer.includes(inner);
+}
+
+function modifyLinesByDependency(lines) {
+    let remaining = [...lines];
+
+    for (let i = 0; i < remaining.length; i++) {
+        let line = remaining[i];
+        let node = line.node;
+
+        // Iterate through other lines to check dependencies
+        for (let otherLine of remaining) {
+            if (otherLine !== line && dependsOn(otherLine.node.type, node.type)) {
+                // Modify the part of the line based on the dependency
+                line.modifiedPart = line.modifiedPart.replace(`${otherLine.node.type}`, `}${otherLine.modifiedPart}\\text{`);
+            }
+        }
+    }
+
+    return remaining;
+}
 
 function updateDepth(node, index, depths, closed, depth, depth_output, node2, node3) {
     if (node.condition && !closed[index]) {
@@ -601,7 +718,7 @@ function treeDepth(node) {
     
 function calculateDepth(node, depth = 0 , depth_output = []) {
     while (node) {
-        if (first) depth_output.push(`& = \\text{${depth === 0 ? `depth(${node.type})` : `depth(${node.type}) + ${depth}`}}\\\\ \n`);
+        if (first) depth_output.push(`&${depth === 0 ? `` : `= `} \\text{${depth === 0 ? `depth(${node.type})` : `depth(${node.type}) + ${depth}`}}\\\\ \n`);
         depth++;
 
         if (node.condition) {
@@ -617,7 +734,7 @@ function calculateDepth(node, depth = 0 , depth_output = []) {
         }
     }
     const lastEntry = depth_output[depth_output.length - 1];
-    if (lastEntry.includes("& = \\text{depth(")) {
+    if (lastEntry.includes("&=  \\text{")) {
         depth_output.push(`& = ${depth}\\\\ \n`);
     }
     return depth_output;
@@ -771,7 +888,7 @@ function displayTree(level){
         }
     } else if (type === "?") {
         if (document.getElementById("stepCheckbox").checked) {
-            visualizationContainer.innerHTML = "Vypni krokovanie"
+            visualizationContainer.innerHTML = "Pre zobrazenie syntaktického stromu vypni krokovanie."
         } else {
             treeData = createTreeWithTypes(tokenizedExpression, "Nat");
             generateProofTree(treeData, document.getElementById("stepCheckbox").checked ? level : 1000);
@@ -779,7 +896,7 @@ function displayTree(level){
                 treeData = createTreeWithTypes(tokenizedExpression, "Bool");
                 generateProofTree(treeData, document.getElementById("stepCheckbox").checked ? level : 1000);
                 if (wrongTyped) {
-                    visualizationContainer.innerHTML = "Pre daný term neexistuje typ"
+                    visualizationContainer.innerHTML = "Pre daný term neexistuje typ."
                 } else {
                     visualizationContainer.innerHTML = generateProofTree(treeData, document.getElementById("stepCheckbox").checked ? level : 1000);
                 }
@@ -794,7 +911,6 @@ function displayTree(level){
             document.getElementById('visualButton').style.display = 'block';
         }
     }
-    console.log(type);
 }
 
 let tokenizedExpression;
@@ -810,6 +926,7 @@ document.getElementById("drawTree").addEventListener("click", () => {
     document.getElementById('conButton').style.display = 'none';
     document.getElementById('evalButton').style.display = 'none';
     document.getElementById('visualButton').style.display = 'none';
+    document.getElementById('depthButton').style.display = 'none';
     if (expression) {
         condition_nodes = [];
         first = true;
@@ -821,6 +938,8 @@ document.getElementById("drawTree").addEventListener("click", () => {
         evalLatex = "";
         tokenizedExpression = "";
         level = 1;
+        vypocetPomocny = 0;
+        depthLatex = "";
         try {
             tokenizedExpression = tokenize(expression);
             
@@ -842,6 +961,9 @@ document.getElementById("drawTree").addEventListener("click", () => {
                 document.getElementById('conButton').style.display = 'block';
                 sizeLatex = sizeContainer.innerHTML;
                 conLatex = conContainer.innerHTML;
+                depthContainer.innerHTML = addPercentToRows(depthContainer.innerHTML, 3);
+                document.getElementById('depthButton').style.display = 'block';
+                depthLatex = depthContainer.innerHTML;
                 if(wrongTyped == false) {
                     evaluationContainer.innerHTML = addPercentToRows(evaluationContainer.innerHTML, 3);
                     document.getElementById('evalButton').style.display = 'block';
@@ -850,15 +972,20 @@ document.getElementById("drawTree").addEventListener("click", () => {
             }
             MathJax.typeset();
         } catch (error) {
-            alert(error.message);
             visualizationContainer.innerHTML = "";
             sizeContainer.innerHTML = "";
             conContainer.innerHTML = "";
             depthContainer.innerHTML = "";
             evaluationContainer.innerHTML = "";
+            document.getElementById('sizeButton').style.display = 'none';
+            document.getElementById('evalButton').style.display = 'none';
+            document.getElementById('conButton').style.display = 'none';
+            document.getElementById('visualButton').style.display = 'none';
+            document.getElementById('depthButton').style.display = 'none';
+            visualizationContainer.innerHTML = `Chyba : ` + error.message;
         }
     } else {
-        alert("chyba");
+        visualizationContainer.innerHTML = `Chyba : Zadaj výraz.`
     }
 });
 
@@ -887,14 +1014,27 @@ document.getElementById("evalButton").addEventListener("click", () => {
     MathJax.typeset();
 });
 
-/*document.getElementById("saveButton").addEventListener("click", function () {
-    // Create the URL to generate the image
-   const imageUrl = "https://math.vercel.app?bgcolor=auto&from=" + encodeURIComponent(proof);
-   const download = document.getElementById('download');
-   // Create a new image element
-   const img = new Image();
-   img.src = imageUrl;  // Set the source of the image
-   img.alt = "Generated Image";  // Set alt text for the image
+document.getElementById("depthButton").addEventListener("click", () => {
+    depthLatex = removeFirstPercent(depthLatex);
+    document.getElementById('depth').innerHTML = depthLatex;
+    MathJax.typeset();
+});
 
-   document.getElementById('download').appendChild(img);
-});*/
+let zoomLevels = [0.3,0.5, 0.75, 0.85, 0.9, 1, 1.2, 1.5];
+let zoomIndex = zoomLevels.indexOf(1);
+let zoomContent = document.querySelector('.zoom-content');
+
+document.querySelector('#sel').addEventListener('change', (e) => {
+    let value = parseFloat(e.target.value);
+    zoomIndex = zoomLevels.indexOf(value);
+    zoomContent.style.transform = `scale(${value})`;
+});
+
+document.getElementById("helpButton").addEventListener("click", function() {
+    var helpText = document.getElementById("helpText");
+    if (helpText.style.display === "none") {
+        helpText.style.display = "block";
+    } else {
+        helpText.style.display = "none";
+    }
+});
