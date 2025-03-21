@@ -981,7 +981,11 @@ document.getElementById("drawTree").addEventListener("click", () => {
             document.getElementById('conButton').style.display = 'none';
             document.getElementById('visualButton').style.display = 'none';
             document.getElementById('depthButton').style.display = 'none';
-            visualizationContainer.innerHTML = `<span style="color: red;">Chyba: ${error.message}</span>`;
+            if (error.message === "MathJax.typeset is not a function") {
+                visualizationContainer.innerHTML = `<span style="color: red;">Chyba pri načítaní stránky, obnovte ju.</span>`;
+            } else {
+                visualizationContainer.innerHTML = `<span style="color: red;">Chyba: ${error.message}</span>`;
+            }            
         }
     } else {
         visualizationContainer.innerHTML = `Chyba : Zadaj výraz.`
