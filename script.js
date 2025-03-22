@@ -895,7 +895,12 @@ function displayTree(level){
                 treeData = createTreeWithTypes(tokenizedExpression, "Bool");
                 generateProofTree(treeData, document.getElementById("stepCheckbox").checked ? level : 1000);
                 if (wrongTyped) {
-                    visualizationContainer.innerHTML = "Pre daný term neexistuje typ."
+                    visualizationContainer.innerHTML = `
+                    Syntaktický strom<br>
+                    <div style="text-align: center; font-weight: bold; margin-top: 5px;">
+                        Pre daný term neexistuje typ.
+                    </div>
+                    `;
                 } else {
                     visualizationContainer.innerHTML = generateProofTree(treeData, document.getElementById("stepCheckbox").checked ? level : 1000);
                 }
