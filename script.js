@@ -141,7 +141,7 @@ function createTree(expression) {
         const { ifPart, thenPart, elsePart } = splitConditional(expression);
     
         if (!ifPart || !thenPart || !elsePart) {
-            throw new Error("Vo výraze chýba časť podmienky.");
+            throw new Error("Neúplná podmienka.");
         }
     
         const tree = {
