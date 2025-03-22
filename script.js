@@ -139,6 +139,11 @@ function createTree(expression) {
     // Handle 'if' statements
     if (expression.startsWith("if")) {
         const { ifPart, thenPart, elsePart } = splitConditional(expression);
+    
+        if (!ifPart || !thenPart || !elsePart) {
+            throw new Error("Neúplná podmienka.");
+        }
+    
         const tree = {
             desc: "if",
             type: expression,
@@ -146,6 +151,7 @@ function createTree(expression) {
             then: createTree(thenPart),
             else: createTree(elsePart),
         };
+        
         return tree;
     }
 
@@ -212,7 +218,7 @@ function createTree(expression) {
     }
 
     // If none of the above matches, throw an error
-    throw new Error(`Neznámy term: ${expression}.`);
+    throw new Error(`Vo výraze sa nachádza neznámy term.`);
 }
 
 function createTreeWithTypes(expression, expectedType) {
