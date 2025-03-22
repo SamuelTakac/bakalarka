@@ -999,7 +999,16 @@ document.getElementById("drawTree").addEventListener("click", () => {
             }            
         }
     } else {
-        visualizationContainer.innerHTML = `Chyba : Zadaj výraz.`
+        visualizationContainer.innerHTML = `<span style="color: red;">Chyba : Zadaj výraz.</span>`
+        sizeContainer.innerHTML = "";
+        conContainer.innerHTML = "";
+        depthContainer.innerHTML = "";
+        evaluationContainer.innerHTML = "";
+        document.getElementById('sizeButton').style.display = 'none';
+        document.getElementById('evalButton').style.display = 'none';
+        document.getElementById('conButton').style.display = 'none';
+        document.getElementById('visualButton').style.display = 'none';
+        document.getElementById('depthButton').style.display = 'none';
     }
 });
 
