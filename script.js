@@ -1,60 +1,75 @@
+import { zoom, full_screen } from './editor.js';
+
+
 let type = null;
-function tokenize(expression) {
-    // Remove whitespaces
-    const strWithoutWhitespace = expression.replace(/\s+/g, '');
-    const lowerCase = strWithoutWhitespace.toLowerCase();
+let unknownTokens = [];
+function lexer(expression) {
+    unknownTokens = [];
 
-    // List of known keywords
-    const keywords = ["if", "iszero", "true", "false", "then", "else", "succ", "pred", "0", "(", ")", ":", "bool", "nat", "?"];
-    const typeAnnotations = ["bool", "nat", "?"]; // Only these are valid types
-
-    // Initialize an empty list to store the matched words
-    const result = [];
+    const lowerCase = expression.toLowerCase();
+    const keywords = ["if", "iszero", "true", "false", "then", "else", "succ", "pred", "0", ":", "bool", "nat", "?", "(", ")"];
     type = null;
-    // Start from the beginning of the string
-    let i = 0;
-    while (i < lowerCase.length) {
-        let matched = false;
-        // Try to match any keyword from the list
-        for (const word of keywords) {
-            if (lowerCase.startsWith(word, i)) {
-                if (word === ":") {
-                    if (type !== null || i + 1 >= lowerCase.length) {
-                        throw new Error("Typ sa musí nachádzat za výrazom.");
-                    }
+    const result = [];
+    let wordtmp = "";
 
-                    // Check the next token for a valid type
-                    const nextToken = keywords.find(kw => lowerCase.startsWith(kw, i + 1));
-                    if (!typeAnnotations.includes(nextToken)) {
-                        throw new Error("Neznámy typ.");
-                    }
-                    type = nextToken;
-                    i += (":" + nextToken).length; // Move past ":type"
-                    matched = true;
-                    break;
-                } 
+    for (let i = 0; i < lowerCase.length; i++) {
+        const char = lowerCase[i];
 
-                if (type !== null) {
-                    throw new Error("Typ sa musí nachádzat za výrazom.");
-                }
-
-                result.push(word); // Add the matched word to the result
-                i += word.length; // Move the index past the matched word
-                matched = true;
-                break;
+        if (char === " " || char === "(" || char === ")" || char === ":") {
+            if (wordtmp.length > 0) {
+                result.push(wordtmp);
+                wordtmp = "";
             }
+
+            if (char === "(" || char === ")" || char === ":") {
+                result.push(char);
+            }
+
+        } else {
+            wordtmp += char;
+        }
+    }
+
+    if (wordtmp.length > 0) {
+        result.push(wordtmp);
+    }
+
+    const len = result.length;
+    const colonCount = result.filter(t => t === ":").length;
+
+    if (colonCount > 1) {
+        throw new Error(`Typová anotácia môže byť len jedna.`);
+    }
+
+    if (colonCount === 1) {
+        if (
+            len < 2 ||
+            result[len - 2] !== ":" ||
+            !["nat", "bool", "?"].includes(result[len - 1])
+        ) {
+            throw new Error(`Typová anotácia musí byť na konci ako ": nat",": bool" alebo ": ?"`);
         }
 
-        if (!matched) {
-            throw new Error(`Vo výraze sa nachádza neznámy term.`);
+        if (result[len - 1] === "nat") {
+            type = "Nat";
+        } else if (result[len - 1] === "bool") {
+            type = "Bool";
+        } else if (result[len - 1] === "?") {
+            type = "?";
+        }
+    } else {
+        type = null;
+    }
+
+
+    for (let i = 0; i < result.length; i++) {
+        const token = result[i];
+        if (!keywords.includes(token)) {
+            unknownTokens.push(token);
         }
     }
-    if (type === "nat") {
-        type = "Nat";
-    } else if (type === "bool") {
-        type = "Bool";
-    }
-    return result.join(' ')
+    tokensForError = result;
+    return result.join(' ');
 }
 
 function splitConditional(condition) {
@@ -93,42 +108,62 @@ function splitConditional(condition) {
     return { ifPart, thenPart, elsePart };
 }
 
-function findClosingParenthesis(expr, startIdx) {
+function findClosingParenthesis(expr, startIdx, currentIndex, task) {
     let depth = 0;
+    let nextIndex = currentIndex;
     for (let i = startIdx; i < expr.length; i++) {
+        if (expr[i] === ' ') {
+            nextIndex++;
+        }
         if (expr[i] === '(') {
             depth++;
         } else if (expr[i] === ')') {
             depth--;
             if (depth === 0) {
-                // Check for any characters after the closing parenthesis
-                if (i < expr.length - 1) {
-                    throw new Error("Nesprávne zátvorkovanie.");
+                if (task === 0) {
+                    let rest = expr.slice(i + 1).trim();
+                    if (rest.length > 0) {
+                        let indicesOfWrong = nextIndex+ 1 + calculateIndex(expr);
+                        for (let i = nextIndex + 1; i <= indicesOfWrong; i++) {
+                            indexOfWrongParser.push(i);
+                        }
+                        throw new Error("format");
+                    }
                 }
-                return i; // Found the matching closing parenthesis
+                return i;
             }
         }
     }
-    throw new Error("Mismatched parentheses");
+    indexOfWrongParser.push(currentIndex);
+    throw new Error("zatvorky");
 }
+
+function calculateIndex(expression) {
+    let beginning = 0;
+    for (let i = 0; i < expression.length; i++) {
+        if (expression[i] === " ") {
+            beginning++;
+        }
+    }
+    return beginning;
+}
+
 
 let start;
 let start_i = 0;
-function createTree(expression) {
-    // Base case: if the expression is empty
+let indexOfWrongParser = [];
+
+function createTree(expression, indexCurrent) {
+    indexOfWrongParser = [];
     if (!expression) {
         return null;
     }
-
-    // Strip leading and trailing whitespace
     expression = expression.trim();
 
-    // If the expression starts with parentheses, evaluate the contents inside
     if (expression.startsWith("(")) {
-        // Find the position of the matching closing parenthesis
-        const closingParenIdx = findClosingParenthesis(expression, 0);
+        const closingParenIdx = findClosingParenthesis(expression, 0, indexCurrent, 0);
         const innerExpression = expression.slice(1, closingParenIdx);
-        return createTree(innerExpression); // Recursively evaluate the inner expression
+        return createTree(innerExpression, indexCurrent+1);
     } else {
         if(start_i==0) {
         start = expression;
@@ -136,38 +171,41 @@ function createTree(expression) {
         }
     }
 
-    // Handle 'if' statements
     if (expression.startsWith("if")) {
         const { ifPart, thenPart, elsePart } = splitConditional(expression);
     
-        if (!ifPart || !thenPart || !elsePart) {
-            throw new Error("Neúplná podmienka.");
+        if (!ifPart){
+            indexOfWrongParser.push(indexCurrent);
+            throw new Error("if");
+        } else if (!thenPart) {
+            indexOfWrongParser.push(indexCurrent + (ifPart.match(/\s/g) || []).length + 2);
+            throw new Error("then");
+        } else if(!elsePart) {
+            indexOfWrongParser.push(indexCurrent + (ifPart.match(/\s/g) || []).length + 2 + (thenPart.match(/\s/g) || []).length + 2);
+            throw new Error("else");
         }
-    
         const tree = {
             desc: "if",
             type: expression,
-            condition: createTree(ifPart),
-            then: createTree(thenPart),
-            else: createTree(elsePart),
+            condition: createTree(ifPart, indexCurrent+1),
+            then: createTree(thenPart, (indexCurrent + (ifPart.match(/\s/g) || []).length + 2 + 1)),
+            else: createTree(elsePart, (indexCurrent + (ifPart.match(/\s/g) || []).length + 2 + (thenPart.match(/\s/g) || []).length + 2) + 1)
         };
         
         return tree;
     }
 
-    // Handle 'succ' and 'pred'
     if (expression.startsWith("succ")) {
         const nextSegment = expression.slice(5).trim();
         const nextChar = nextSegment.charAt(0);
-        if(nextChar === "") throw new Error("Za 'succ' musí následovať 0 alebo ďalší term.");
-       /* // Check if the next character is '(', '0', or if the next word is "true" or "false"
-        if (nextChar !== '(' && nextChar !== '0' && !nextSegment.startsWith("true") && !nextSegment.startsWith("false")) {
-            throw new Error();
-        }*/
+        if(nextChar === "") {
+            indexOfWrongParser.push(indexCurrent); 
+            throw new Error("succ/iszero/pred");
+        }
         const tree = {
             type: expression,
             desc: "succ",
-            argument: createTree(expression.slice(5).trim())
+            argument: createTree(expression.slice(5).trim(),indexCurrent+1)
         };
         return tree;
     }
@@ -175,15 +213,14 @@ function createTree(expression) {
     if (expression.startsWith("pred")) {
         const nextSegment = expression.slice(5).trim();
         const nextChar = nextSegment.charAt(0);
-        if(nextChar === "") throw new Error("Za 'pred' musí následovať 0 alebo ďalší term.");
-        // Check if the next character is '(', '0', or if the next word is "true" or "false"
-        /*if (nextChar !== '(' && nextChar !== '0' && !nextSegment.startsWith("true") && !nextSegment.startsWith("false")) {
-            throw new Error();
-        }*/
+        if(nextChar === "") {
+            indexOfWrongParser.push(indexCurrent); 
+            throw new Error("succ/iszero/pred");
+        }
         const tree = {
             type: expression,
             desc: "pred",
-            argument: createTree(expression.slice(5).trim())
+            argument: createTree(expression.slice(5).trim(), indexCurrent+1)
         };
         return tree;
     }
@@ -191,20 +228,18 @@ function createTree(expression) {
     if (expression.startsWith("iszero")) {
         const nextSegment = expression.slice(7).trim();
         const nextChar = nextSegment.charAt(0);
-        if(nextChar === "") throw new Error("Za 'iszero' musí následovať 0 alebo ďalší term.");
-        /*// Check if the next character is '(', '0', or if the next word is "true" or "false"
-        if (nextChar !== '(' && nextChar !== '0' && !nextSegment.startsWith("true") && !nextSegment.startsWith("false")) {
-            throw new Error();
-        }*/
+        if(nextChar === "") {
+            indexOfWrongParser.push(indexCurrent); 
+            throw new Error("succ/iszero/pred");
+        }
         const tree = {
             type: expression,
             desc: "iszero",
-            argument: createTree(expression.slice(7).trim())
+            argument: createTree(expression.slice(7).trim(), indexCurrent+1)
         };
         return tree;
     }
 
-    // Handle literals (true, false, 0)
     if (expression === "true") {
         return { type: "true", desc: "true"};
     }
@@ -217,8 +252,18 @@ function createTree(expression) {
         return { type: "0", desc: "0"};
     }
 
-    // If none of the above matches, throw an error
-    throw new Error(`Vo výraze sa nachádza neznámy term.`);
+    if (expression.startsWith("true") || expression.startsWith("false") || expression.startsWith("0")) {
+        let indicesOfWrong = indexCurrent + calculateIndex(expression);
+        for (let i = indexCurrent+1; i <= indicesOfWrong; i++) {
+            indexOfWrongParser.push(i);
+        }
+        throw new Error(`literal`);
+    }
+    let indicesOfWrong = indexCurrent + calculateIndex(expression);
+    for (let i = indexCurrent; i <= indicesOfWrong; i++) {
+        indexOfWrongParser.push(i);
+    }
+    throw new Error ("format");
 }
 
 function createTreeWithTypes(expression, expectedType) {
@@ -226,7 +271,7 @@ function createTreeWithTypes(expression, expectedType) {
     expression = expression.trim();
 
     if (expression.startsWith("(")) {
-        const closingParenIdx = findClosingParenthesis(expression, 0);
+        const closingParenIdx = findClosingParenthesis(expression, 0, 0, 1);
         const innerExpression = expression.slice(1, closingParenIdx);
         return createTreeWithTypes(innerExpression, expectedType);
     }
@@ -295,8 +340,6 @@ function createTreeWithTypes(expression, expectedType) {
         };
         return tree;
     }
-
-    throw new Error(`Neznámy term: ${expression}.`);
 }
 
 let wrongTyped = false;
@@ -309,9 +352,8 @@ function generateProofTree(tree, maxDepth) {
 
     function getNodeLabel(node) {
         if (node.error) {
-            //return `${node.type} : }\\textcolor{red}{\\text{${node.typing}}}`;
             wrongTyped = true;
-            return `${node.type} : ${node.typing}  X`;
+            return `${node.type} : ${node.typing} - ZLE`;
         } else {
             return type ? `${node.type} : ${node.typing}` : `${node.type} ∈ Term`;
         }
@@ -347,16 +389,14 @@ function generateProofTree(tree, maxDepth) {
 
     proofTree += buildTree(tree);
     proofTree += "\\end{prooftree}";
-    proof = proofTree;
-    return "<p>Syntaktický strom $$" + proofTree + "$$</p>";
+    return "<p><br>" + proofTree + "</p>";
 }
 
-let sizeLatex = "";
 function sizeCount(tree) {
     // Initialize a queue with the root node
     let queue = [tree];
     let size = 0;
-    let output = `<p>Kalkulácia veľkosti<br>$$ \\begin{align} \n`; // Initialize the table
+    let output = `<p><br>\\begin{align} \n`; // Initialize the table
 
     while (queue.length > 0) {
         const currentLevel = [];
@@ -390,15 +430,14 @@ function sizeCount(tree) {
     }
 
     // Final output with total size
-    output += ` &= ${size} \n\\end{align} $$ </p>`;
+    output += ` &= ${size} \n\\end{align}</p>`;
     document.getElementById("size").innerHTML = output;
 }
 
-let conLatex = "";
 function conCount(tree) {
     // Initialize a queue with the root node
     let queue = [tree];
-    let output = `Kalkulácia počtu konštánt<br>\\begin{align} \n`; // Initialize the table
+    let output = `<br>\\begin{align} \n`; // Initialize the table
     let constants = [];
     let count = 0;
     while (queue.length > 0) {
@@ -456,7 +495,6 @@ function conCount(tree) {
 let vypocetPomocny = 0;
 let condition_nodes = [];
 let first = true;
-let depthLatex = "";
 function calculateConditionalDepth(node_condition, node_then, node_else, depths, closed, depth, depth_output) {
     let firstDepth = updateDepth(node_condition, 0, depths, closed, depth, depth_output, node_then, node_else);
     let secondDepth = updateDepth(node_then, 1, depths, closed, depth, depth_output, node_condition, node_else);
@@ -760,7 +798,7 @@ function removeUnnecessaryParentheses2(expr) {
         if (expr[i] === '(') {
             try {
                 // Find the matching closing parenthesis
-                const closingIdx = findClosingParenthesis(expr, i);
+                const closingIdx = findClosingParenthesis(expr, i, 0, 1);
                 // Skip to the character after the closing parenthesis
                 i = closingIdx + 1;
             } catch (error) {
@@ -775,7 +813,6 @@ function removeUnnecessaryParentheses2(expr) {
     return expr;
 }
 
-let evalLatex = "";
 function evaluateExpression(expression) {
     let steps = [];
     let currentExpression = expression;
@@ -805,10 +842,6 @@ function evaluateExpression(expression) {
         }
         if (expr.includes('pred ( succ 0 )')) {
             return expr.replace('pred ( succ 0 )', '0');
-        }
-        // Rule for iszero(succ nv1) -> false for any succ
-        if (expr.match(/iszero \( succ /)) {
-            return expr.replace(/iszero \( succ /, 'false');
         }
         if (expr.includes('if')) {
             const ifIdx = expr.indexOf('if');
@@ -841,7 +874,7 @@ function evaluateExpression(expression) {
 
     steps.push(currentExpression);
 
-    let latexHTML = '<p>Evaluácia termu<br>\\begin{align} \\\\ \n';
+    let latexHTML = '<p><br>\\begin{align} \\\\ \n';
     let i = 0;
     steps.forEach((step, index) => {
         if (index < steps.length - 1) {
@@ -849,7 +882,7 @@ function evaluateExpression(expression) {
                 latexHTML += `& \\text{${step}} \\\\ \n`;
                 i++;
             } else {
-                latexHTML += `& -> \\text{${step}} \\\\ \n`;
+                latexHTML += `& \\rightarrow \\text{${step}} \\\\ \n`;
             }
         }
     });
@@ -885,6 +918,7 @@ function removeFirstPercent(text) {
 
 function displayTree(level){
     const visualizationContainer = document.getElementById('visualization');
+    const errorContainer = document.querySelector('.error_container');
     if (type === "Bool" || type === "Nat") {
         treeData = createTreeWithTypes(tokenizedExpression, type);
         visualizationContainer.innerHTML = generateProofTree(treeData, document.getElementById("stepCheckbox").checked ? level : 1000);
@@ -893,7 +927,7 @@ function displayTree(level){
         }
     } else if (type === "?") {
         if (document.getElementById("stepCheckbox").checked) {
-            visualizationContainer.innerHTML = 'Syntaktický strom <br> <span style="color: red;">Chyba : Na overenie existencie typu vypni krokovanie.</span>';
+            errorContainer.innerHTML = 'Chyby : <br><br>Na overenie existencie typu vypni krokovanie.';
         } else {
             treeData = createTreeWithTypes(tokenizedExpression, "Nat");
             generateProofTree(treeData, document.getElementById("stepCheckbox").checked ? level : 1000);
@@ -901,8 +935,7 @@ function displayTree(level){
                 treeData = createTreeWithTypes(tokenizedExpression, "Bool");
                 generateProofTree(treeData, document.getElementById("stepCheckbox").checked ? level : 1000);
                 if (wrongTyped) {
-                    visualizationContainer.innerHTML = `
-                    Syntaktický strom<br>
+                    visualizationContainer.innerHTML = `<br>
                     <div style="text-align: center; font-weight: bold; margin-top: 5px;">
                         Pre daný term neexistuje typ.
                     </div>
@@ -915,7 +948,7 @@ function displayTree(level){
             }
         }
    } else {
-        treeData = createTree(tokenizedExpression);
+        treeData = createTree(tokenizedExpression, 0);
         visualizationContainer.innerHTML = generateProofTree(treeData, document.getElementById("stepCheckbox").checked ? level : 1000);
         if (document.getElementById("stepCheckbox").checked) {
             document.getElementById('visualButton').style.display = 'block';
@@ -925,13 +958,21 @@ function displayTree(level){
 
 let tokenizedExpression;
 let tmpType;
+let treeData;
+window.sizeLatex = "";
+window.conLatex = "";
+window.evalLatex = "";
+window.depthLatex = "";
+window.tree = "";
+let tokensForError = [];
 document.getElementById("drawTree").addEventListener("click", () => {
-    const expression = document.getElementById("expressionInput").value.trim();
+    const expression = window.editor.getValue();
     const visualizationContainer = document.getElementById('visualization');
     const sizeContainer = document.getElementById('size');
     const conContainer = document.getElementById('constants');
     const depthContainer = document.getElementById('depth');
     const evaluationContainer = document.getElementById('evaluate');
+    const errorContainer = document.querySelector('.error_container');
     document.getElementById('sizeButton').style.display = 'none';
     document.getElementById('conButton').style.display = 'none';
     document.getElementById('evalButton').style.display = 'none';
@@ -941,69 +982,157 @@ document.getElementById("drawTree").addEventListener("click", () => {
         condition_nodes = [];
         first = true;
         start_i = 0;
+        errorContainer.innerHTML = "Chyby";
         visualizationContainer.innerHTML = "";
         evaluationContainer.innerHTML = "";
-        sizeLatex = "";
-        conLatex = "";
-        evalLatex = "";
+        window.sizeLatex = "";
+        window.conLatex = "";
+        window.evalLatex = "";
+        window.depthLatex = "";
+        window.tree = "";
         tokenizedExpression = "";
         level = 1;
         vypocetPomocny = 0;
-        depthLatex = "";
+        treeData = "";
         try {
-            tokenizedExpression = tokenize(expression);
-            
-            displayTree(level);
+            tokenizedExpression = lexer(expression);
+            window.insertText(tokenizedExpression);
+            if (unknownTokens.length > 0) {
+                throw new Error("lex");
+            }
 
-            treeDataNew = createTree(tokenizedExpression);
+            let testParser = tokenizedExpression;
+            if (type != null) {
+                testParser = testParser.slice(0, (testParser.indexOf(":") - 1));
+            }
+            let treeDataNew = createTree(testParser, 0);
+
+            if(type != null) {
+                tokenizedExpression = tokenizedExpression.slice(0, tokenizedExpression.indexOf(":") - 1).trim();
+            }
+            displayTree(level);
+            window.tree = visualizationContainer.innerHTML;
             sizeCount(treeDataNew);
             conCount(treeDataNew);
-            depthContainer.innerHTML = `<p>Kalkulácia hĺbky<br>\\begin{align}\n` + calculateDepth(treeDataNew).join("") + `\\end{align} </p>`;
+            depthContainer.innerHTML = `<p><br>\\begin{align}\n` + calculateDepth(treeDataNew).join("") + `\\end{align}</p>`;
             if(wrongTyped == false) {
                 tmpType = type; 
-                evaluateExpression(tokenize(start)); 
+                evaluateExpression(lexer(start)); 
                 type = tmpType;
+                window.evalLatex = evaluationContainer.innerHTML;
             }
+
+            window.sizeLatex = sizeContainer.innerHTML;
+            window.conLatex = conContainer.innerHTML;
+            window.depthLatex = depthContainer.innerHTML;
+
             if (document.getElementById("stepCheckbox").checked) {
                 sizeContainer.innerHTML = addPercentToRows(sizeContainer.innerHTML, 3);
                 conContainer.innerHTML = addPercentToRows(conContainer.innerHTML, 3);
                 document.getElementById('sizeButton').style.display = 'block';
                 document.getElementById('conButton').style.display = 'block';
-                sizeLatex = sizeContainer.innerHTML;
-                conLatex = conContainer.innerHTML;
+                window.sizeLatex = sizeContainer.innerHTML;
+                window.conLatex = conContainer.innerHTML;
                 depthContainer.innerHTML = addPercentToRows(depthContainer.innerHTML, 3);
                 document.getElementById('depthButton').style.display = 'block';
-                depthLatex = depthContainer.innerHTML;
+                window.depthLatex = depthContainer.innerHTML;
                 if(wrongTyped == false) {
                     evaluationContainer.innerHTML = addPercentToRows(evaluationContainer.innerHTML, 3);
                     document.getElementById('evalButton').style.display = 'block';
-                    evalLatex = evaluationContainer.innerHTML;
+                    window.evalLatex = evaluationContainer.innerHTML;
                 }
             }
             MathJax.typeset();
+            zoom();
+            full_screen();
         } catch (error) {
+            console.log(error.message);
+            let highlighted = [];
+            if (error.message === "lex") {
+                for (let word of tokensForError) {
+                    if (unknownTokens.includes(word)) {
+                        highlighted.push( `<span style="color: red;">${word}</span>`);
+                    } else {
+                        highlighted.push(word);
+                    }
+                }
+                errorContainer.innerHTML = `Chyby : <br><br>Vo vašom vstupe sa nachádzajú neznáme termy : <br><br>${highlighted.join(' ')}`;    
+            }
+            else if (error.message === "succ/iszero/pred" || error.message === "if" || error.message === "then" || error.message === "else" || error.message === "zatvorky") {
+                let explanation = "";
+                if (error.message === "succ/iszero/pred") {
+                    explanation = `Za "succ/iszero/pred" musí následovať literál alebo ďalší term :`;
+                } else if (error.message === "if") {
+                    explanation = `Neúplná podmienka - obsah časti "if" je prázdny :`;
+                } else if (error.message === "then") {
+                    explanation = `Neúplná podmienka - obsah časti "then" je prázdny :`;
+                } else if (error.message === "else") {
+                    explanation = `Neúplná podmienka - obsah časti "else" je prázdny :`;
+                } else {
+                    explanation = `Daná zátvorka nie je uzatvorená :`;
+                }
+            
+                for (let i = 0; i < tokensForError.length; i++) {
+                    let word = tokensForError[i];
+                    if (indexOfWrongParser.includes(i)) {
+                        highlighted.push(`<span style="color: red;">${word}</span>`);
+                    } else {
+                        highlighted.push(word);
+                    }
+                }
+            
+                errorContainer.innerHTML = `Chyby : <br><br>${explanation} <br><br>${highlighted.join(' ')}`;
+            }
+            else if(error.message === "format") {
+                for (let i = 0; i < tokensForError.length; i++) {
+                    let word = tokensForError[i];
+                    if (indexOfWrongParser.includes(i)) {
+                        highlighted.push(`<span style="color: red;">${word}</span>`);
+                    } else {
+                        highlighted.push(word);
+                    }
+                }
+                errorContainer.innerHTML = `Chyby : <br><br>Daný výraz je nesprávne formátovaný: <br><br>${highlighted.join(' ')}`;
+            }
+            else if (error.message === "literal") {
+                for (let i = 0; i < tokensForError.length; i++) {
+                    let word = tokensForError[i];
+                    if (indexOfWrongParser.includes(i)) {
+                        highlighted.push(`<span style="color: red;">${word}</span>`);
+                    } else {
+                        highlighted.push(word);
+                    }
+                }
+                errorContainer.innerHTML = `Chyby : <br><br>Za literálom nesmie následovať nič : <br><br>${highlighted.join(' ')}`;
+            }
             visualizationContainer.innerHTML = "";
             sizeContainer.innerHTML = "";
             conContainer.innerHTML = "";
             depthContainer.innerHTML = "";
             evaluationContainer.innerHTML = "";
+            window.sizeLatex = "";
+            window.conLatex = "";
+            window.evalLatex = "";
+            window.depthLatex = "";
+            window.tree = "";
             document.getElementById('sizeButton').style.display = 'none';
             document.getElementById('evalButton').style.display = 'none';
             document.getElementById('conButton').style.display = 'none';
             document.getElementById('visualButton').style.display = 'none';
-            document.getElementById('depthButton').style.display = 'none';
-            if (error.message === "MathJax.typeset is not a function") {
-                visualizationContainer.innerHTML = `<span style="color: red;">Chyba pri načítaní stránky, obnovte ju.</span>`;
-            } else {
-                visualizationContainer.innerHTML = `<span style="color: red;">Chyba: ${error.message}</span>`;
-            }            
+            document.getElementById('depthButton').style.display = 'none';   
         }
     } else {
-        visualizationContainer.innerHTML = `<span style="color: red;">Chyba : Zadaj výraz.</span>`
+        errorContainer.innerHTML = `<span style="color: red;">Chyby : <br><br>Zadaj výraz.</span>`;
+        visualizationContainer.innerHTML = "";
         sizeContainer.innerHTML = "";
         conContainer.innerHTML = "";
         depthContainer.innerHTML = "";
         evaluationContainer.innerHTML = "";
+        window.sizeLatex = "";
+        window.conLatex = "";
+        window.evalLatex = "";
+        window.depthLatex = "";
+        window.tree = "";
         document.getElementById('sizeButton').style.display = 'none';
         document.getElementById('evalButton').style.display = 'none';
         document.getElementById('conButton').style.display = 'none';
@@ -1016,48 +1145,31 @@ let level = 1;
 document.getElementById("visualButton").addEventListener("click", () => {
     level++;
     displayTree(level);
+    window.tree = document.getElementById('visualization').innerHTML;
     MathJax.typeset();
 });
 
 document.getElementById("sizeButton").addEventListener("click", () => {
-    sizeLatex = removeFirstPercent(sizeLatex);
-    document.getElementById('size').innerHTML = sizeLatex;
+    window.sizeLatex = removeFirstPercent(window.sizeLatex);
+    document.getElementById('size').innerHTML = window.sizeLatex;
     MathJax.typeset();
 });
 
 document.getElementById("conButton").addEventListener("click", () => {
-    conLatex = removeFirstPercent(conLatex);
-    document.getElementById('constants').innerHTML = conLatex;
+    window.conLatex = removeFirstPercent(window.conLatex);
+    document.getElementById('constants').innerHTML = window.conLatex;
     MathJax.typeset();
 });
 
 document.getElementById("evalButton").addEventListener("click", () => {
-    evalLatex = removeFirstPercent(evalLatex);
-    document.getElementById('evaluate').innerHTML = evalLatex;
+    window.evalLatex = removeFirstPercent(window.evalLatex);
+    document.getElementById('evaluate').innerHTML = window.evalLatex;
     MathJax.typeset();
 });
 
 document.getElementById("depthButton").addEventListener("click", () => {
-    depthLatex = removeFirstPercent(depthLatex);
-    document.getElementById('depth').innerHTML = depthLatex;
+    window.depthLatex = removeFirstPercent(window.depthLatex);
+    document.getElementById('depth').innerHTML = window.depthLatex;
     MathJax.typeset();
-});
 
-let zoomLevels = [0.3,0.5, 0.75, 0.85, 0.9, 1, 1.2, 1.5];
-let zoomIndex = zoomLevels.indexOf(1);
-let zoomContent = document.querySelector('.zoom-content');
-
-document.querySelector('#sel').addEventListener('change', (e) => {
-    let value = parseFloat(e.target.value);
-    zoomIndex = zoomLevels.indexOf(value);
-    zoomContent.style.transform = `scale(${value})`;
-});
-
-document.getElementById("helpButton").addEventListener("click", function() {
-    var helpText = document.getElementById("helpText");
-    if (helpText.style.display === "none") {
-        helpText.style.display = "block";
-    } else {
-        helpText.style.display = "none";
-    }
 });

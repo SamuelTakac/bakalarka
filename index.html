@@ -5,102 +5,177 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Jazyk čísel a pravdivostných hodnôt</title>
     <link rel="stylesheet" href="styles.css">
-    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <script type="text/javascript">
         window.MathJax = {
             loader: {
-                load: ['[tex]/bussproofs', '[tex]/color'] // Load both extensions
+                load: ['[tex]/bussproofs', '[tex]/color']
             },
             tex: {
-                packages: {'[+]': ['bussproofs', 'color']} // Add both to tex packages
+                packages: {'[+]': ['bussproofs', 'color']}
+            },
+            startup: {
+                ready: () => {
+                    MathJax.startup.defaultReady(); // Required to finalize startup
+                    // Now it's safe to call MathJax.typeset()
+                    MathJax.typeset();
+                }
             }
         };
     </script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    
+    </script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.44.0/min/vs/loader.min.js"></script>
+
+    <script type="module" src="resizers.js"></script>
+    <script type="module" src="script.js"></script>
+    <script type="module" src="editor.js"></script>
+    <script type="module" src="buttons.js"></script>
 </head>
 <body>
-    <nav class="navbar">
+    <div class="navbar">
         <div class="navbar-logo">
-            <span class="site-title">Vizualizácia a emulácia vlastností syntaxe a sémantiky jednoduchého funkcionálneho jazyka</span>
+        <span class="site-title">Vizualizácia a emulácia vlastností syntaxe a sémantiky jednoduchého funkcionálneho jazyka</span>
         </div>
-    </nav>
-
-
-    <div class = "container">
-        <h1>Jazyk čísel a pravdivostných hodnôt</h1>
-        <p class="description">
-            <span class="extra">Zadaj výraz, ktorý chceš vyhodnotiť. <div class="help-section">
-                <button id="helpButton" class="cute-button3">Help</button>
-            </div></span>
-        </p>
-
-        <div class="editor-container">
-            <textarea id="expressionInput" placeholder="napr. if (iszero (pred (succ 0))) then true else false" autocomplete="off"></textarea>
-        </div>
-        <div class="actions-container">
-            <label class="checkbox-label">
-                <input type="checkbox" id="stepCheckbox" class="checkbox" /> Krokovanie
-            </label>
-            <button id="drawTree" class="cute-button">Vypracuj</button>
-        </div>
-        
-        <div class="zoom-header">
-            <span class="zoom-label">Zoom</span>
-            <select id="sel" class="select">
-                <option value="0.3">30%</option>
-                <option value="0.5">50%</option>
-                <option value="0.75">75%</option>
-                <option value="0.85">85%</option>
-                <option value="0.9">90%</option>
-                <option value="1" selected>100%</option>
-                <option value="1.2">120%</option>
-                <option value="1.5">150%</option>
-            </select>
-        </div>
-
-        <div class="results-container">
-            <div class="zoom-content">
-                <div id="helpText" class="help-text" style="display: none;">
-                <h2>Help</h2>
+        <button id="darkModeToggle" class="buttonDark"><span id="icon">🌙</span></button>
+        <a class="formular" href="https://docs.google.com/forms/d/e/1FAIpQLSe47-_ccZAYOd6xAuxVxexx8_ynzs1bQ6oh4O5TV49iHbCXkQ/viewform?usp=header" target="_blank">Formulár</a>
+        <button data-modal-target="#modal">Pomoc</button>
+        <div class="modal" id="modal">
+            <div class="modal-header">
+            <div class="title">Pomoc</div>
+            <button data-close-button class="close-button">&times;</button>
+            </div>
+            <div class="modal-body">
                 <p>Tento nástroj vám umožňuje vizualizovať a vyhodnocovať výrazy jednoduchého funkcionálneho jazyka.</p>
+                <p>Môžete si vybrať jeden z predpripravených výrazov pomocou "Vlož príklad".</p>
                 <p>Na vyhodnotenie netypovaného výrazu stačí zadať samotný výraz.</p>
                 <p>Na vyhodnotenie typovaného výrazu treba za výrazom zadať jeho typ v tvare ": nat" alebo ": bool".</p>
-                <p>Ak má term nesprávny typ tak má vedľa seba zobrazené "X".</p>
+                <p>Ak má term nesprávny typ tak má vedľa seba zobrazené "- ZLE".</p>
                 <p>Na overenie existencie typu môžete za výrazom zadať ": ?". (nesmie byť zapnuté "Krokovanie")</p>
                 <p>Po zadaní výrazu stlačte tlačidlo "Vypracuj".</p>
                 <p>Môžete tiež zapnúť možnosť "Krokovanie", a postupne zobrazovať riešenia po krokoch.</p>
-                <p>Na prispôsobenie zobrazenia môžete využiť možnosť "Zoom".</p>
-                <p>Pri objavení chyby ma môžete kontaktovať na adrese samuel.takac05@gmail.com.</p>
-                </div>
-                <div id="visualization"></div>
-                
-                <div class="button-container">
-                    <button id="visualButton" class="cute-button2" hidden>Ďalši krok</button>
-                </div>
-        
-                <div id="size"></div>
-                <div class="button-container">
-                    <button id="sizeButton" class="cute-button2" hidden>Ďalši krok</button>
-                </div>
-        
-                <div id="constants"></div>
-                <div class="button-container">
-                    <button id="conButton" class="cute-button2" hidden>Ďalši krok</button>
-                </div>
-        
-                <div id="depth"></div>
-                <div class="button-container">
-                    <button id="depthButton" class="cute-button2" hidden>Ďalši krok</button>
-                </div>
-        
-                <div id="evaluate"></div>
-                <div class="button-container">
-                    <button id="evalButton" class="cute-button2" hidden>Ďalši krok</button>
-                </div>
+                <p>Na prispôsobenie zobrazenia výpočtu môžete využiť zoom pomocou kolieska na myši.</p>
+                <p>Pomocou "+" a "-" viete upravovať veľkosť písma na editore.</p>
             </div>
         </div>
-        
+        <div id="overlay"></div>
+      </div>
+    
+    <div class="actions-container">
+        <button id="increaseFontSizeAndLineHeight">+</button>
+        <button id="decreaseFontSizeAndLineHeight">-</button>
+        <label class="checkbox-label">
+            <input type="checkbox" id="stepCheckbox" class="checkbox" /> Krokovanie
+        </label>
+        <button id="drawTree" class="cute-button">Vypracuj</button>
+        <div class="priklady-container">
+            <button class="prikladbtn">Vlož príklad ▼</button>
+            <div id="priklady" class="priklady-content">
+              <a href="#" onclick="insertText('pred(succ 0)')">Jednoduchý</a>
+              <a href="#" onclick="insertText('succ ( succ ( if iszero ( succ 0 ) then true else succ ( pred 0 ) ) ) ')">Stredný</a>
+              <a href="#" onclick="insertText('pred( succ( if iszero( succ 0) then pred( if iszero( pred 0) then false else true) else ( if iszero 0 then (if true then true else false) else true))) : nat')">Zložitý</a>
+            </div>
+        </div>
     </div>
-    <script src="script.js"></script>
+    
+    <div class="topBottomContainer">
+        <div class="row" id="topRow">
+            <div id="editor_container"></div>
+            <div class="resizer vertical"></div>
+            <div class="error_container">Chyby</div>
+            <div class="resizer vertical"></div>
+            <div class="size-container">
+              Kalkulácia veľkosti
+              <div class="export-container">
+                  <button class="exportbtn">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrow-up-right-square" viewBox="0 0 16 16">
+                          <path d="M12.854 3.146a.5.5 0 0 0 0-.708l-4.5-4.5a.5.5 0 0 0-.708.708L11.293 3H4.5a.5.5 0 0 0 0 1h6.793l-3.646 3.646a.5.5 0 0 0 .708.708l4.5-4.5z"/>
+                      </svg>
+                  </button>
+                  <div id="export" class="export-content">
+                      <a href="#" onclick="copyLatex('sizeLatex')">LaTeX</a>
+                  </div>
+              </div>
+              <button id="sizeButton" class="cute-button" hidden>Ďalši krok</button>
+              <button class="fullscreen-button">⛶</button>
+              <div id="size"></div>
+            </div>
+            <div class="resizer vertical"></div>
+            <div class="constants-container">
+                Kalkulácia počtu konštánt
+                <div class="export-container">
+                    <button class="exportbtn">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrow-up-right-square" viewBox="0 0 16 16">
+                          <path d="M12.854 3.146a.5.5 0 0 0 0-.708l-4.5-4.5a.5.5 0 0 0-.708.708L11.293 3H4.5a.5.5 0 0 0 0 1h6.793l-3.646 3.646a.5.5 0 0 0 .708.708l4.5-4.5z"/>
+                        </svg>
+                      </button>
+                    <div id="export" class="export-content">
+                      <a href="#" onclick="copyLatex('conLatex')">LaTeX</a>
+                    </div>
+                </div>
+                <button id="conButton" class="cute-button" hidden>Ďalši krok</button>
+                <button class="fullscreen-button">⛶</button>
+                <div id="constants"></div>
+            </div>
+        </div>
+
+        <div class="resizer horizontal" id="middleResizer"></div>
+    
+        <div class="row" id="bottomRow">
+            <div class="results-container">
+            Syntaktický strom
+            <div class="export-container">
+                <button class="exportbtn">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrow-up-right-square" viewBox="0 0 16 16">
+                      <path d="M12.854 3.146a.5.5 0 0 0 0-.708l-4.5-4.5a.5.5 0 0 0-.708.708L11.293 3H4.5a.5.5 0 0 0 0 1h6.793l-3.646 3.646a.5.5 0 0 0 .708.708l4.5-4.5z"/>
+                    </svg>
+                  </button>
+                <div id="export" class="export-content">
+                  <a href="#" onclick="copyLatex('tree')">LaTeX</a>
+                </div>
+            </div>
+            <button id="visualButton" class="cute-button" hidden>Ďalši krok</button>
+            <button class="fullscreen-button">⛶</button>
+            <div id="visualization"></div>
+            </div>
+            <div class="resizer vertical"></div>
+            <div class="evaluate-container">
+                Evaluácia termu
+                <div class="export-container">
+                    <button class="exportbtn">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrow-up-right-square" viewBox="0 0 16 16">
+                          <path d="M12.854 3.146a.5.5 0 0 0 0-.708l-4.5-4.5a.5.5 0 0 0-.708.708L11.293 3H4.5a.5.5 0 0 0 0 1h6.793l-3.646 3.646a.5.5 0 0 0 .708.708l4.5-4.5z"/>
+                        </svg>
+                      </button>
+                    <div id="export" class="export-content">
+                      <a href="#" onclick="copyLatex('evalLatex')">LaTeX</a>
+                    </div>
+                </div>
+                <button id="evalButton" class="cute-button" hidden>Ďalši krok</button>
+                <button class="fullscreen-button">⛶</button>
+                <div id="evaluate"></div>
+            </div>
+            <div class="resizer vertical"></div>
+            <div class="depth-container">
+                Kalkulácia hĺbky
+                <div class="export-container">
+                    <button class="exportbtn">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrow-up-right-square" viewBox="0 0 16 16">
+                          <path d="M12.854 3.146a.5.5 0 0 0 0-.708l-4.5-4.5a.5.5 0 0 0-.708.708L11.293 3H4.5a.5.5 0 0 0 0 1h6.793l-3.646 3.646a.5.5 0 0 0 .708.708l4.5-4.5z"/>
+                        </svg>
+                      </button>
+                    <div id="export" class="export-content">
+                      <a href="#" onclick="copyLatex('depthLatex')">LaTeX</a>
+                    </div>
+                </div>
+                <button id="depthButton" class="cute-button" hidden>Ďalši krok</button>
+                <button class="fullscreen-button">⛶</button>
+                <div id="depth"></div>
+            </div>
+        </div>
+    </div>
+
 </body>
 </html>
+
