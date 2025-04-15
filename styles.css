@@ -1,3 +1,6 @@
+html {
+  zoom: 75%; /* or 0.75 */
+}
 
 body {
   background: #FFFDDD;
