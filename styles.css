@@ -75,6 +75,10 @@ h1 {
   flex-direction: column; /* Stacks the rows vertically */
 }
 
+#topRow {
+  height : 100px;
+}
+
 .row {
   display: flex;
   flex-grow: 1;
@@ -227,7 +231,7 @@ body.dark-mode .prikladbtn:focus, body.dark-mode .prikladbtn:active {
 
 .size-container, .constants-container, .evaluate-container, .depth-container{
   width: 20%;
-  height: 525px;
+  
   background-color: #ffffff;
   white-space: nowrap;
   overflow-x: auto;
@@ -237,7 +241,6 @@ body.dark-mode .prikladbtn:focus, body.dark-mode .prikladbtn:active {
 
 .error_container {
   width: 20%;
-  height: 525px;
   background-color: #ffffff;
   white-space: normal;
   word-wrap: break-word;
@@ -245,7 +248,6 @@ body.dark-mode .prikladbtn:focus, body.dark-mode .prikladbtn:active {
 
 .results-container {
   width: 60%;
-  height: 525px;
   background-color: #ffffff;
   white-space: nowrap; 
   overflow-x:auto;

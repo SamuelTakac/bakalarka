@@ -49,12 +49,18 @@ function setupHorizontalResizers(row) {
 }
 
 
+
 function setupVerticalResizer(resizer, topRow, bottomRow) {
     let startY = 0;
     let topHeight = 0;
     let bottomHeight = 0;
     let containerHeight = 0;
     
+
+    const startTop = topRow.getBoundingClientRect().height;
+    const startBottom = bottomRow.getBoundingClientRect().height;
+    document.querySelector('#topRow').style.height = `${startTop}px`;
+    document.querySelector('#bottomRow').style.height = `${startBottom}px`;
     const onMouseDown = (e) => {
         e.preventDefault();
         startY = e.clientY;
@@ -79,14 +85,8 @@ function setupVerticalResizer(resizer, topRow, bottomRow) {
         if (newTopHeight < 10 || newBottomHeight < 10) return;
     
         // Update the height in pixels (use 'height' instead of 'flex' to avoid percentage issues)
-        document.querySelector('#editor_container').style.height = `${newTopHeight}px`;
-        document.querySelector('.error_container').style.height = `${newTopHeight}px`;
-        document.querySelector('.size-container').style.height = `${newTopHeight}px`;
-        document.querySelector('.constants-container').style.height = `${newTopHeight}px`;
-        document.querySelector('.results-container').style.height = `${newBottomHeight}px`;
-        document.querySelector('.evaluate-container').style.height = `${newBottomHeight}px`;
-        document.querySelector('.depth-container').style.height = `${newBottomHeight}px`;
-    
+        document.querySelector('#topRow').style.height = `${newTopHeight}px`;
+        document.querySelector('#bottomRow').style.height = `${newBottomHeight}px`;
         // If necessary, trigger a layout refresh for the editor (Monaco or similar)
         if (window.editor) {
             editor.layout();
@@ -102,6 +102,7 @@ function setupVerticalResizer(resizer, topRow, bottomRow) {
     // Attach mousedown event to the resizer element
     resizer.addEventListener('mousedown', onMouseDown);
 }
+
 
 
 // Setup all resizers
