@@ -1,4 +1,4 @@
-import { zoom, full_screen } from './stepsbuttons.js';
+import { zoom, full_screen } from './containersFunctionality.js';
 import { sizeCount, conCount, depthCount, evaluateExpression} from './functions.js';
 
 
@@ -39,7 +39,7 @@ function lexer(expression) {
     const colonCount = result.filter(t => t === ":").length;
 
     if (colonCount > 1) {
-        throw new Error(`Typová anotácia môže byť len jedna.`);
+        throw new Error(`type`);
     }
 
     if (colonCount === 1) {
@@ -48,7 +48,7 @@ function lexer(expression) {
             result[len - 2] !== ":" ||
             !["nat", "bool", "?"].includes(result[len - 1])
         ) {
-            throw new Error(`Typová anotácia musí byť na konci ako ": nat",": bool" alebo ": ?"`);
+            throw new Error(`type`);
         }
 
         if (result[len - 1] === "nat") {
@@ -546,7 +546,7 @@ document.getElementById("drawTree").addEventListener("click", () => {
             zoom();
             full_screen();
         } catch (error) {
-            let highlighted = [];console.log(error.message);
+            let highlighted = [];
             if (error.message === "lex") {
                 for (let word of tokensForError) {
                     if (unknownTokens.includes(word)) {
@@ -556,6 +556,9 @@ document.getElementById("drawTree").addEventListener("click", () => {
                     }
                 }
                 errorContainer.innerHTML = `Chyby : <br><br>Vo vašom vstupe sa nachádzajú neznáme termy : <br><br>${highlighted.join(' ')}`;    
+            }
+            if (error.message === "type") {
+                errorContainer.innerHTML = `Chyby : <br><br>Typová anotácia môže byť len jedna a na konci výrazu, v tvare ": nat",": bool" alebo ": ?"`;    
             }
             else if (error.message === "succ/iszero/pred" || error.message === "if" || error.message === "then" || error.message === "else" || error.message === "zatvorky") {
                 let explanation = "";

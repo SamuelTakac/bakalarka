@@ -413,55 +413,49 @@ export function depthCount(tree) {
 
 function removeUnnecessaryParentheses(expression) {
     return expression
-        .replace(/\(\s*([0-9]+)\s*\)/g, '$1')  // Remove parentheses around numbers
+        .replace(/\(\s*([0]+)\s*\)/g, '$1')  // Remove parentheses around numbers
         .replace(/\(\s*(true|false)\s*\)/g, '$1') // Remove parentheses around boolean values
         .replace(/pred \(\s*([0-9]+)\s*\)/g, 'pred $1') // Remove unnecessary parentheses after pred
         .replace(/succ \(\s*([0-9]+)\s*\)/g, 'succ $1') // Remove unnecessary parentheses after succ
         .replace(/iszero \(\s*([0-9]+)\s*\)/g, 'iszero $1'); // Remove unnecessary parentheses after iszero
 }
 
-function removeUnnecessaryParentheses2(expr) {
-    let i = 0;
-    while (i < expr.length) {
-        if (expr[i] === '(') {
-            try {
-                // Find the matching closing parenthesis
-                const closingIdx = findClosingParenthesis(expr, i, 0, 1);
-                // Skip to the character after the closing parenthesis
-                i = closingIdx + 1;
-            } catch (error) {
-                // If there's no matching closing parenthesis, remove the unmatched opening parenthesis
-                expr = expr.slice(0, i) + expr.slice(i + 1);
-                // Don't reset i, continue from the current position
-            }
-        } else {
-            i++;  // Move to the next character if it's not an opening parenthesis
+function removeUnmatchedTrailingParens(expr) {
+    let balance = 0;
+    let end = expr.length;
+    while (end > 0 && expr[end - 1] === ')') {
+        balance++;
+        end--;
+    }
+    for (let i = end - 1; i >= 0 && balance > 0; i--) {
+        if (expr[i] === ')') {
+            balance = balance + 2;
+        } else if (expr[i] === '(') {
+            balance = balance - 2;
         }
     }
-    return expr;
+    return expr.slice(0, expr.length - balance);
 }
 
 export function evaluateExpression(expression) {
     let steps = [];
     let currentExpression = expression;
     function evaluateStep(expr) {
-        expr = removeUnnecessaryParentheses(expr); // Apply before each evaluation step
+        expr = removeUnnecessaryParentheses(expr);
     
         if (expr.includes("succ true") || expr.includes("succ false")) {
             return expr;
         }
-    
         if (expr.includes("pred true") || expr.includes("pred false")) {
             return expr;
         }
         if (expr.includes('iszero true') || expr.includes('iszero false')) {
             return expr;
         }
-        // Rule for iszero 0
+
         if (expr.includes('iszero 0')) {
             return expr.replace('iszero 0', 'true');
         }
-        // Rule for iszero(succ nv1)
         if (expr.includes('iszero ( succ 0 )')) {
             return expr.replace('iszero ( succ 0 )', 'false');
         }           
@@ -473,19 +467,20 @@ export function evaluateExpression(expression) {
         }
         if (expr.includes('if')) {
             const ifIdx = expr.indexOf('if');
-            const { ifPart, thenPart, elsePart } = splitConditional(expr);
-    
-            // Ensure the condition is a boolean before evaluating
+            let { ifPart, thenPart, elsePart } = splitConditional(expr);
+            const elseIdx = expr.indexOf(elsePart);
+
             if (ifPart !== 'true' && ifPart !== 'false') {
-                return expr; // Stop evaluation if the condition is not a boolean
+                return expr;
             }
-    
+            thenPart = removeUnmatchedTrailingParens(thenPart);
+            elsePart = removeUnmatchedTrailingParens(elsePart);
             let replacement = ifPart === 'true' ? thenPart : elsePart;
-            // Remove unnecessary parentheses after the replacement
-            let replacedExpr = expr.slice(0, ifIdx) + replacement + expr.slice(expr.indexOf(elsePart - 1),elsePart.length);
+            if (replacement.startsWith('(')) {
+                replacement = replacement.slice(2, -2); 
+            }
+            let replacedExpr = expr.slice(0, ifIdx) + replacement + expr.slice(elseIdx+elsePart.length);     
             replacedExpr = removeUnnecessaryParentheses(replacedExpr);
-            // Remove any unnecessary outer parentheses that may have remained
-            //return removeUnnecessaryParentheses2(replacedExpr);
             return replacedExpr;
         }     
         if (expr.match(/pred \( succ \((.*?)\) \)/)) {
