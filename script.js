@@ -1,7 +1,6 @@
 import { zoom, full_screen } from './containersFunctionality.js';
 import { sizeCount, conCount, depthCount, evaluateExpression} from './functions.js';
 
-
 let type = null;
 let unknownTokens = [];
 function lexer(expression) {
