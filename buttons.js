@@ -7,7 +7,6 @@ function myFunction2() {
 }
 
 document.addEventListener('DOMContentLoaded', function() {
-
   document.querySelector(".prikladbtn").addEventListener("click", myFunction);
   
   window.onclick = function(event) {
