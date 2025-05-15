@@ -74,7 +74,6 @@ function lexer(expression) {
 }
 
 function cleanBrackets(arr) {
-    // Odstráni obalujúcu zátvorku
     if (arr[0] === '(') {
         let depth = 0;
         for (let i = 0; i < arr.length; i++) {
@@ -88,7 +87,6 @@ function cleanBrackets(arr) {
         }
     }
 
-    // Zredukuje viacero '(' a odstráni nadbytočné ')'
     const stack = [];
     let openCount = 0;
 
@@ -96,19 +94,17 @@ function cleanBrackets(arr) {
         const token = arr[i];
 
         if (token === '(') {
-            // Pridaj len ak predtým nebola (
             if (stack.length === 0 || stack[stack.length - 1] !== '(') {
                 stack.push(token);
                 openCount++;
             } else {
-                openCount++; // zvyš, ale nepridávaj ďalšiu (
+                openCount++;
             }
         } else if (token === ')') {
             if (openCount > 0) {
                 stack.push(token);
                 openCount--;
             }
-            // inak ignoruj túto nadbytočnú zatváraciu zátvorku
         } else {
             stack.push(token);
         }
@@ -125,7 +121,6 @@ export function splitConditional(condition) {
     let thenIdx = -1;
     let elseIdx = -1;
 
-    // Locate 'then'
     for (let i = ifIdx + 2; i < condition.length; i++) {
         const char = condition[i];
         if (char === '(') stack.push('(');
@@ -136,7 +131,6 @@ export function splitConditional(condition) {
         }
     }
 
-    // Locate 'else'
     for (let i = thenIdx + 4; i < condition.length; i++) {
         const char = condition[i];
         if (char === '(') stack.push('(');
@@ -147,7 +141,6 @@ export function splitConditional(condition) {
         }
     }
 
-    // Extract parts
     const ifPart = condition.substring(ifIdx + 2, thenIdx).trim();
     const thenPart = condition.substring(thenIdx + 4, elseIdx).trim();
     const elsePart = condition.substring(elseIdx + 4).trim();
