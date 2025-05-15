@@ -74,6 +74,7 @@ function lexer(expression) {
 }
 
 function cleanBrackets(arr) {
+    // Odstráni obalujúcu zátvorku
     if (arr[0] === '(') {
         let depth = 0;
         for (let i = 0; i < arr.length; i++) {
@@ -87,6 +88,7 @@ function cleanBrackets(arr) {
         }
     }
 
+    // Zredukuje viacero '(' a odstráni nadbytočné ')'
     const stack = [];
     let openCount = 0;
 
@@ -94,17 +96,19 @@ function cleanBrackets(arr) {
         const token = arr[i];
 
         if (token === '(') {
+            // Pridaj len ak predtým nebola (
             if (stack.length === 0 || stack[stack.length - 1] !== '(') {
                 stack.push(token);
                 openCount++;
             } else {
-                openCount++;
+                openCount++; // zvyš, ale nepridávaj ďalšiu (
             }
         } else if (token === ')') {
             if (openCount > 0) {
                 stack.push(token);
                 openCount--;
             }
+            // inak ignoruj túto nadbytočnú zatváraciu zátvorku
         } else {
             stack.push(token);
         }
@@ -121,6 +125,7 @@ export function splitConditional(condition) {
     let thenIdx = -1;
     let elseIdx = -1;
 
+    // Locate 'then'
     for (let i = ifIdx + 2; i < condition.length; i++) {
         const char = condition[i];
         if (char === '(') stack.push('(');
@@ -131,6 +136,7 @@ export function splitConditional(condition) {
         }
     }
 
+    // Locate 'else'
     for (let i = thenIdx + 4; i < condition.length; i++) {
         const char = condition[i];
         if (char === '(') stack.push('(');
@@ -141,6 +147,7 @@ export function splitConditional(condition) {
         }
     }
 
+    // Extract parts
     const ifPart = condition.substring(ifIdx + 2, thenIdx).trim();
     const thenPart = condition.substring(thenIdx + 4, elseIdx).trim();
     const elsePart = condition.substring(elseIdx + 4).trim();
@@ -539,14 +546,14 @@ document.getElementById("drawTree").addEventListener("click", () => {
             if (unknownTokens.length > 0) {
                 throw new Error("lex");
             }
-            let splitExpression = tokenizedExpression.split(" ");
-            splitExpression = cleanBrackets(splitExpression);
-            splitExpression = cleanBrackets(splitExpression);
-            tokenizedExpression = splitExpression.join(" ");
             let testParser = tokenizedExpression;
             if (type != null) {
                 testParser = testParser.slice(0, (testParser.indexOf(":") - 1));
             }
+            let splitExpression = tokenizedExpression.split(" ");
+            splitExpression = cleanBrackets(splitExpression);
+            splitExpression = cleanBrackets(splitExpression);
+            tokenizedExpression = splitExpression.join(" ");
             let treeDataNew = createTree(testParser, 0);
 
             if(type != null) {
