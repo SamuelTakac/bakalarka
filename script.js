@@ -1,6 +1,7 @@
 import { zoom, full_screen } from './containersFunctionality.js';
 import { sizeCount, conCount, depthCount, evaluateExpression} from './functions.js';
 
+
 let type = null;
 let unknownTokens = [];
 function lexer(expression) {
@@ -9,7 +10,7 @@ function lexer(expression) {
     const lowerCase = expression.toLowerCase();
     const keywords = ["if", "iszero", "true", "false", "then", "else", "succ", "pred", "0", ":", "bool", "nat", "?", "(", ")"];
     type = null;
-    const result = [];
+    let result = [];
     let wordtmp = "";
 
     for (let i = 0; i < lowerCase.length; i++) {
@@ -68,9 +69,55 @@ function lexer(expression) {
             unknownTokens.push(token);
         }
     }
-    tokensForError = result;
+    tokensForError = result;console.log(result);
     return result.join(' ');
 }
+
+function cleanBrackets(arr) {
+    // Odstráni obalujúcu zátvorku
+    if (arr[0] === '(') {
+        let depth = 0;
+        for (let i = 0; i < arr.length; i++) {
+            if (arr[i] === '(') depth++;
+            else if (arr[i] === ')') depth--;
+
+            if (depth === 0) {
+                arr = arr.slice(1, i).concat(arr.slice(i + 1));
+                break;
+            }
+        }
+    }
+
+    // Zredukuje viacero '(' a odstráni nadbytočné ')'
+    const stack = [];
+    let openCount = 0;
+
+    for (let i = 0; i < arr.length; i++) {
+        const token = arr[i];
+
+        if (token === '(') {
+            // Pridaj len ak predtým nebola (
+            if (stack.length === 0 || stack[stack.length - 1] !== '(') {
+                stack.push(token);
+                openCount++;
+            } else {
+                openCount++; // zvyš, ale nepridávaj ďalšiu (
+            }
+        } else if (token === ')') {
+            if (openCount > 0) {
+                stack.push(token);
+                openCount--;
+            }
+            // inak ignoruj túto nadbytočnú zatváraciu zátvorku
+        } else {
+            stack.push(token);
+        }
+    }
+
+    return stack;
+}
+
+
 
 export function splitConditional(condition) {
     const stack = [];
@@ -499,7 +546,10 @@ document.getElementById("drawTree").addEventListener("click", () => {
             if (unknownTokens.length > 0) {
                 throw new Error("lex");
             }
-
+            let splitExpression = tokenizedExpression.split(" ");
+            splitExpression = cleanBrackets(splitExpression);
+            splitExpression = cleanBrackets(splitExpression);
+            tokenizedExpression = splitExpression.join(" ");
             let testParser = tokenizedExpression;
             if (type != null) {
                 testParser = testParser.slice(0, (testParser.indexOf(":") - 1));
@@ -545,7 +595,7 @@ document.getElementById("drawTree").addEventListener("click", () => {
             zoom();
             full_screen();
         } catch (error) {
-            let highlighted = [];
+            let highlighted = [];console.log(error);
             if (error.message === "lex") {
                 for (let word of tokensForError) {
                     if (unknownTokens.includes(word)) {
