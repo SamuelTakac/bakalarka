@@ -36,7 +36,6 @@ document.getElementById("depthButton").addEventListener("click", () => {
 
 export function zoom() {
     let zoomableContainers = document.querySelectorAll("#size, #constants, #evaluate, #depth, #visualization");
-
     zoomableContainers.forEach(container => {
         let scale = 1; // Uchovanie mierky
 
