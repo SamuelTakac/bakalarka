@@ -74,7 +74,6 @@ function lexer(expression) {
 }
 
 function cleanBrackets(arr) {
-    // Odstráni obalujúcu zátvorku
     if (arr[0] === '(') {
         let depth = 0;
         for (let i = 0; i < arr.length; i++) {
@@ -88,7 +87,6 @@ function cleanBrackets(arr) {
         }
     }
 
-    // Zredukuje viacero '(' a odstráni nadbytočné ')'
     const stack = [];
     let openCount = 0;
 
@@ -96,19 +94,17 @@ function cleanBrackets(arr) {
         const token = arr[i];
 
         if (token === '(') {
-            // Pridaj len ak predtým nebola (
             if (stack.length === 0 || stack[stack.length - 1] !== '(') {
                 stack.push(token);
                 openCount++;
             } else {
-                openCount++; // zvyš, ale nepridávaj ďalšiu (
+                openCount++;
             }
         } else if (token === ')') {
             if (openCount > 0) {
                 stack.push(token);
                 openCount--;
             }
-            // inak ignoruj túto nadbytočnú zatváraciu zátvorku
         } else {
             stack.push(token);
         }
