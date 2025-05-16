@@ -5,7 +5,6 @@ export function sizeCount(tree) {
     let queue = [tree];
     let size = 0;
     let output = `<p><br>\\begin{align} \n`; 
-
     while (queue.length > 0) {
         const currentLevel = [];
         const nextQueue = [];
