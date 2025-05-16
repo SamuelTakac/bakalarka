@@ -7,7 +7,6 @@ window.editor;
 require(['vs/editor/editor.main'], function () {
 
     monaco.languages.register({ id: 'myCustomLang' });
-
     monaco.languages.setMonarchTokensProvider('myCustomLang', {
         tokenizer: {
             root: [
