@@ -3,7 +3,6 @@ function setupHorizontalResizers(row) {
     resizers.forEach(resizer => {
         const left = resizer.previousElementSibling;
         const right = resizer.nextElementSibling;
-
         let startX = 0;
         let leftWidth = 0;
         let rightWidth = 0;
