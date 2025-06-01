@@ -3,6 +3,7 @@ function setupHorizontalResizers(row) {
     resizers.forEach(resizer => {
         const left = resizer.previousElementSibling;
         const right = resizer.nextElementSibling;
+
         let startX = 0;
         let leftWidth = 0;
         let rightWidth = 0;
@@ -46,59 +47,4 @@ function setupHorizontalResizers(row) {
     });
 }
 
-
-
-function setupVerticalResizer(resizer, topRow, bottomRow) {
-    let startY = 0;
-    let topHeight = 0;
-    let bottomHeight = 0;
-    let containerHeight = 0;
-    
-
-    const startTop = topRow.getBoundingClientRect().height;
-    const startBottom = bottomRow.getBoundingClientRect().height;
-    document.querySelector('#topRow').style.height = `${startTop}px`;
-    document.querySelector('#bottomRow').style.height = `${startBottom}px`;
-    const onMouseDown = (e) => {
-        e.preventDefault();
-        startY = e.clientY;
-        topHeight = topRow.getBoundingClientRect().height;
-        bottomHeight = bottomRow.getBoundingClientRect().height;
-        containerHeight = topRow.parentNode.getBoundingClientRect().height; 
-        
-        document.addEventListener('mousemove', onMouseMove);
-        document.addEventListener('mouseup', onMouseUp);
-
-    };
-    
-    const onMouseMove = (e) => {
-        const dy = e.clientY - startY;
-    
-        const newTopHeight = topHeight + dy;
-        const newBottomHeight = bottomHeight - dy;
-    
-        if (newTopHeight < 10 || newBottomHeight < 10) return;
-    
-        document.querySelector('#topRow').style.height = `${newTopHeight}px`;
-        document.querySelector('#bottomRow').style.height = `${newBottomHeight}px`;
-        if (window.editor) {
-            editor.layout();
-        }
-    };
-    
-    const onMouseUp = () => {
-        document.removeEventListener('mousemove', onMouseMove);
-        document.removeEventListener('mouseup', onMouseUp);
-    };
-    
-    resizer.addEventListener('mousedown', onMouseDown);
-}
-
-
 setupHorizontalResizers(document.getElementById('topRow'));
-setupHorizontalResizers(document.getElementById('bottomRow'));
-setupVerticalResizer(
-document.getElementById('middleResizer'),
-document.getElementById('topRow'),
-document.getElementById('bottomRow')
-);

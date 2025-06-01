@@ -33,31 +33,6 @@ document.getElementById("depthButton").addEventListener("click", () => {
 
 });
 
-
-export function zoom() {
-    let zoomableContainers = document.querySelectorAll("#size, #constants, #evaluate, #depth, #visualization");
-
-    zoomableContainers.forEach(container => {
-        let scale = 1; 
-
-        container.addEventListener("wheel", function (event) {
-            event.preventDefault();
-            let zoomIntensity = 0.1;
-            if (event.deltaY < 0) {
-                scale += zoomIntensity;
-            } else {
-                scale -= zoomIntensity;
-                if (scale < 0.1) scale = 0.1;
-            }
-
-            Array.from(container.children).forEach(child => {
-                child.style.transform = `scale(${scale})`;
-                child.style.transformOrigin = "center center";
-            });
-        });
-    });
-}
-
 export function full_screen () {
     const fullscreenButtons = document.querySelectorAll(".fullscreen-button");
 
@@ -120,3 +95,30 @@ export function full_screen () {
         }
     });
 }
+
+export function showAccordion() {
+  document.getElementById('accordion-container').style.display = 'block';
+}
+
+export function hideAccordion() {
+  const container = document.getElementById('accordion-container');
+  if (container) {
+    container.style.display = 'none';
+
+    const contents = container.querySelectorAll('.panel-content');
+    contents.forEach(content => content.style.display = 'none');
+  }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  const toggles = document.querySelectorAll('.panel-toggle');
+
+  toggles.forEach(toggle => {
+    toggle.addEventListener('click', () => {
+      const content = toggle.nextElementSibling;
+      const isVisible = content.style.display === 'block';
+
+      content.style.display = isVisible ? 'none' : 'block';
+    });
+  });
+});

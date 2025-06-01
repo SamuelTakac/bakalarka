@@ -117,7 +117,6 @@ window.copyLatex = function(div) {
 
 document.getElementById("darkModeToggle").addEventListener("click", function () {
   document.body.classList.toggle("dark-mode");
-  document.querySelector(".navbar").classList.toggle("dark-mode");
   document.querySelectorAll(".resizer").forEach(function(resizer) {
     resizer.classList.toggle("dark-mode");
   });
@@ -131,12 +130,6 @@ document.getElementById("darkModeToggle").addEventListener("click", function () 
   });
   document.querySelector("#increaseFontSizeAndLineHeight").classList.toggle("dark-mode");
   document.querySelector("#decreaseFontSizeAndLineHeight").classList.toggle("dark-mode");
-  document.querySelector(".results-container").classList.toggle("dark-mode");
-  document.querySelector(".size-container").classList.toggle("dark-mode");
-  document.querySelector(".constants-container").classList.toggle("dark-mode");
-  document.querySelector(".evaluate-container").classList.toggle("dark-mode");
-  document.querySelector(".depth-container").classList.toggle("dark-mode");
-  document.querySelector(".error_container").classList.toggle("dark-mode");
   window.editor.updateOptions({ theme: document.body.classList.contains("dark-mode") ? "vs-dark" : "vs" });
   document.querySelector(".modal").classList.toggle("dark-mode");
   const icon = document.getElementById("icon");
@@ -147,3 +140,20 @@ document.getElementById("darkModeToggle").addEventListener("click", function () 
   }
 });
 
+
+
+document.querySelectorAll('.tab-button').forEach(button => {
+  button.addEventListener('click', () => {
+    const tab = button.dataset.tab;
+
+    document.querySelectorAll('.tab-button').forEach(btn =>
+      btn.classList.remove('active')
+    );
+    document.querySelectorAll('.tab-content').forEach(content =>
+      content.classList.remove('active')
+    );
+
+    button.classList.add('active');
+    document.getElementById(tab).classList.add('active');
+  });
+});

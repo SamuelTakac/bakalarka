@@ -1,4 +1,4 @@
-import { zoom, full_screen } from '../UI/containersFunctionality.js';
+import { showAccordion, hideAccordion, full_screen } from '../UI/containersFunctionality.js';
 import { sizeCount, conCount, depthCount, evaluateExpression} from '../term_functions/functions.js';
 
 
@@ -586,7 +586,7 @@ document.getElementById("drawTree").addEventListener("click", () => {
                 }
             }
             MathJax.typeset();
-            zoom();
+            showAccordion();
             full_screen();
         } catch (error) {
             let highlighted = [];console.log(error);
@@ -665,6 +665,7 @@ document.getElementById("drawTree").addEventListener("click", () => {
             document.getElementById('conButton').style.display = 'none';
             document.getElementById('visualButton').style.display = 'none';
             document.getElementById('depthButton').style.display = 'none';   
+            hideAccordion();
         }
     } else {
         errorContainer.innerHTML = `<span style="color: red;">Chyby : <br><br>Zadaj výraz.</span>`;
@@ -683,5 +684,6 @@ document.getElementById("drawTree").addEventListener("click", () => {
         document.getElementById('conButton').style.display = 'none';
         document.getElementById('visualButton').style.display = 'none';
         document.getElementById('depthButton').style.display = 'none';
+        hideAccordion();
     }
 });

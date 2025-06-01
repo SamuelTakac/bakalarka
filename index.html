@@ -15,8 +15,7 @@
             },
             startup: {
                 ready: () => {
-                    MathJax.startup.defaultReady(); // Required to finalize startup
-                    // Now it's safe to call MathJax.typeset()
+                    MathJax.startup.defaultReady();
                     MathJax.typeset();
                 }
             }
@@ -26,6 +25,7 @@
     
     </script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.44.0/min/vs/loader.min.js"></script>
+
     <script type="module" src="src/UI/resizers.js"></script>
     <script type="module" src="src/UI/containersFunctionality.js"></script>
     <script type="module" src="src/UI/buttons.js"></script>
@@ -42,11 +42,20 @@
         <a class="formular" href="https://docs.google.com/forms/d/e/1FAIpQLSe47-_ccZAYOd6xAuxVxexx8_ynzs1bQ6oh4O5TV49iHbCXkQ/viewform?usp=header" target="_blank">Formulár</a>
         <button data-modal-target="#modal">Pomoc</button>
         <div class="modal" id="modal">
-            <div class="modal-header">
+          <div class="modal-header">
             <div class="title">Pomoc</div>
             <button data-close-button class="close-button">&times;</button>
-            </div>
-            <div class="modal-body">
+          </div>
+
+          <div class="modal-tabs">
+            <button class="tab-button active" data-tab="tab1">Základné</button>
+            <button class="tab-button" data-tab="tab2">Gramatika NBL</button>
+            <button class="tab-button" data-tab="tab3">Funkcie NBL</button>
+            <button class="tab-button" data-tab="tab4">Sémantika NBL</button>
+            <button class="tab-button" data-tab="tab5">Typovaný NBL</button>
+          </div>
+
+          <div class="modal-body tab-content active" id="tab1">
                 <p>Tento nástroj vám umožňuje vizualizovať a vyhodnocovať výrazy jednoduchého funkcionálneho jazyka.</p>
                 <p>Môžete si vybrať jeden z predpripravených výrazov pomocou "Vlož príklad".</p>
                 <p>Na vyhodnotenie netypovaného výrazu stačí zadať samotný výraz.</p>
@@ -55,9 +64,91 @@
                 <p>Na overenie existencie typu môžete za výrazom zadať ": ?". (nesmie byť zapnuté "Krokovanie")</p>
                 <p>Po zadaní výrazu stlačte tlačidlo "Vypracuj".</p>
                 <p>Môžete tiež zapnúť možnosť "Krokovanie", a postupne zobrazovať riešenia po krokoch.</p>
-                <p>Na prispôsobenie zobrazenia výpočtu môžete využiť zoom pomocou kolieska na myši.</p>
+                <p>Výpočty si viete zobraziť aj v móde fullscreen.</p>
                 <p>Pomocou "+" a "-" viete upravovať veľkosť písma na editore.</p>
-            </div>
+          </div>
+
+          <div class="modal-body tab-content" id="tab2">
+            <p>Gramatika definuje možné tvary termov, ktoré budeme označovať metapremennou <em>t</em>.</p>
+            <p>Gramatika NBL má tvar:</p>
+            <p><em>t</em> ::= true | false | if <em>t</em> then <em>t</em> else <em>t</em> | 0 | succ <em>t</em> | pred <em>t</em> | iszero <em>t</em></p>
+            <p>Metapremennú <em>t</em> na ľavej strane nazývame aj neterminálny symbol.</p>
+            <p>Induktívna definícia určuje množinu termov NBL ako najmenšiu množinu Term, ktorá spĺňa určité podmienky.</p>
+            <p>1. <em>true</em>, <em>false</em> a <em>0</em> patria do množiny Term.</p>
+            <p>2. Ak <em>t₁</em> je v množine Term, potom aj <em>succ t₁</em>, <em>pred t₁</em>, <em>iszero t₁</em> patria do Term.</p>
+            <p>3. Ak <em>t₁</em>, <em>t₂</em> a <em>t₃</em> patria do Term, potom aj <em>if t₁ then t₂ else t₃</em> patrí do Term.</p>
+            <p>Ďalšou možnosťou definovania syntaxe je forma odvodzovacích pravidiel.</p>
+            <p>Odvodzovacie pravidlo má tvar: predpoklady nad čiarou, záver pod čiarou, spolu s názvom pravidla.</p>
+            <p>Ak pravidlo nemá predpoklady, nazýva sa axióma.</p>
+            <p>Každý term musí byť skonštruovaný použitím týchto pravidiel:</p>
+            <ul>
+              <li>Axiómy: <em>true</em>, <em>false</em>, <em>0</em> patria do množiny Term.</li>
+              <li>Ak <em>t₁</em> ∈ Term, potom aj <em>succ t₁</em>, <em>pred t₁</em>, <em>iszero t₁</em> patria do Term.</li>
+              <li>Ak <em>t₁</em>, <em>t₂</em>, <em>t₃</em> ∈ Term, potom <em>if t₁ then t₂ else t₃</em> ∈ Term.</li>
+              <li>Ak <em>t</em> ∈ Term, potom aj <em>(t)</em> ∈ Term.</li>
+            </ul>
+          </div>
+
+          <div class="modal-body tab-content" id="tab3">
+            <p><strong>Funkcia Con(t)</strong> vracia množinu konštánt obsiahnutých v terme <em>t</em>.</p>
+            <p>Con(true) = {true}</p>
+            <p>Con(false) = {false}</p>
+            <p>Con(0) = {0}</p>
+            <p>Con(succ t₁) = Con(t₁)</p>
+            <p>Con(pred t₁) = Con(t₁)</p>
+            <p>Con(iszero t₁) = Con(t₁)</p>
+            <p>Con(if t₁ then t₂ else t₃) = Con(t₁) ∪ Con(t₂) ∪ Con(t₃)</p>
+
+            <p><strong>Funkcia Size(t)</strong> určuje veľkosť termu ako počet uzlov syntaktického stromu.</p>
+            <p>Size(true) = 1</p>
+            <p>Size(false) = 1</p>
+            <p>Size(0) = 1</p>
+            <p>Size(succ t₁) = Size(t₁) + 1</p>
+            <p>Size(pred t₁) = Size(t₁) + 1</p>
+            <p>Size(iszero t₁) = Size(t₁) + 1</p>
+            <p>Size(if t₁ then t₂ else t₃) = Size(t₁) + Size(t₂) + Size(t₃) + 1</p>
+
+            <p><strong>Funkcia depth(t)</strong> určuje hĺbku najdlhšej vetvy syntaktického stromu.</p>
+            <p>depth(true) = 1</p>
+            <p>depth(false) = 1</p>
+            <p>depth(0) = 1</p>
+            <p>depth(succ t₁) = depth(t₁) + 1</p>
+            <p>depth(pred t₁) = depth(t₁) + 1</p>
+            <p>depth(iszero t₁) = depth(t₁) + 1</p>
+            <p>depth(if t₁ then t₂ else t₃) = max(depth(t₁), depth(t₂), depth(t₃)) + 1</p>
+          </div>
+
+          <div class="modal-body tab-content" id="tab4">
+            <p>Programy v jazyku NBL sú termy, ktoré sa dajú vyhodnotiť na hodnoty. Vyhodnotenie jednotlivých krokov sa označuje symbolom →.</p>
+            <p>Význam termu je jeho výsledná hodnota (napr. <code>true</code>, <code>false</code>, <code>0</code>).</p>
+            <p>Keďže NBL je netypovaný, môže obsahovať aj nesprávne termy ako <code>pred(false)</code>, ktoré síce sú syntakticky správne, no nie je ich možné vyhodnotiť. Zavedením typov by sa takéto prípady dali odhaliť vopred.</p>
+            <p><strong>Príklady vyhodnocovacích pravidiel:</strong></p>
+            <p><code>if true then t2 else t3 → t2</code></p>
+            <p><code>if false then t2 else t3 → t3</code></p>
+            <p><code>iszero 0 → true</code></p>
+            <p><code>iszero (succ nv) → false</code></p>
+            <p><code>pred (succ nv) → nv</code></p>
+            <p><code>pred 0 → 0</code></p>
+          </div>
+
+          <div class="modal-body tab-content" id="tab5">
+            <p>Typové systémy slúžia na statickú analýzu programov, ktorá umožňuje odhaliť chyby ešte pred ich spustením, čím prispievajú k správnosti programov.</p>
+            <p>Jazyk NBL rozširujeme o dva základné typy:</p>
+            <ul>
+              <li><strong>Nat</strong> – numerické hodnoty (čísla)</li>
+              <li><strong>Bool</strong> – pravdivostné hodnoty (true, false)</li>
+            </ul>
+            <p>Typy sú priraďované termom počas prekladu pomocou typovej relácie, ktorá zabezpečuje jednoznačné určenie typu a odhalenie typových nezrovnalostí.</p>
+            <p><strong>Typovacie pravidlá:</strong></p>
+            <p><code>true : Bool</code></p>
+            <p><code>false : Bool</code></p>
+            <p><code>0 : Nat</code></p>
+            <p><code>if t1 : Bool then t2 : T else t3 : T</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;- je typu <code>T</code></p>
+            <p><code>succ t1 : Nat</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;- ak <code>t1 : Nat</code></p>
+            <p><code>pred t1 : Nat</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;- ak <code>t1 : Nat</code></p>
+            <p><code>iszero t1 : Bool</code>&nbsp;&nbsp;&nbsp;&nbsp;- ak <code>t1 : Nat</code></p>
+            <p>Typová relácia sa overuje pomocou syntaktického stromu, kde každý uzol aplikuje príslušné pravidlo a ak sú všetky listy axiómy, term je správne typovaný.</p>
+          </div>
         </div>
         <div id="overlay"></div>
       </div>
@@ -79,101 +170,93 @@
         </div>
     </div>
     
-    <div class="topBottomContainer">
-        <div class="row" id="topRow">
-            <div id="editor_container"></div>
-            <div class="resizer vertical"></div>
-            <div class="error_container">Chyby</div>
-            <div class="resizer vertical"></div>
-            <div class="size-container">
-              Kalkulácia veľkosti
-              <div class="export-container">
-                  <button class="exportbtn">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrow-up-right-square" viewBox="0 0 16 16">
-                          <path d="M12.854 3.146a.5.5 0 0 0 0-.708l-4.5-4.5a.5.5 0 0 0-.708.708L11.293 3H4.5a.5.5 0 0 0 0 1h6.793l-3.646 3.646a.5.5 0 0 0 .708.708l4.5-4.5z"/>
-                      </svg>
-                  </button>
-                  <div id="export" class="export-content">
-                      <a href="#" onclick="copyLatex('sizeLatex')">LaTeX</a>
-                  </div>
-              </div>
-              <button id="sizeButton" class="cute-button" hidden>Ďalši krok</button>
-              <button class="fullscreen-button">⛶</button>
-              <div id="size" class="zoom-target"></div>
-            </div>
-            <div class="resizer vertical"></div>
-            <div class="constants-container">
-                Kalkulácia počtu konštánt
-                <div class="export-container">
-                    <button class="exportbtn">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrow-up-right-square" viewBox="0 0 16 16">
-                          <path d="M12.854 3.146a.5.5 0 0 0 0-.708l-4.5-4.5a.5.5 0 0 0-.708.708L11.293 3H4.5a.5.5 0 0 0 0 1h6.793l-3.646 3.646a.5.5 0 0 0 .708.708l4.5-4.5z"/>
-                        </svg>
-                      </button>
-                    <div id="export" class="export-content">
-                      <a href="#" onclick="copyLatex('conLatex')">LaTeX</a>
-                    </div>
-                </div>
-                <button id="conButton" class="cute-button" hidden>Ďalši krok</button>
-                <button class="fullscreen-button">⛶</button>
-                <div id="constants"></div>
-            </div>
-        </div>
+    <div class="row" id="topRow">
+      <div id="editor_container"></div>
+      <div class="resizer vertical"></div>
+      <div class="error_container">Chyby</div>
+    </div>
 
-        <div class="resizer horizontal" id="middleResizer"></div>
-    
-        <div class="row" id="bottomRow">
-            <div class="results-container">
-            Syntaktický strom
-            <div class="export-container">
-                <button class="exportbtn">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrow-up-right-square" viewBox="0 0 16 16">
-                      <path d="M12.854 3.146a.5.5 0 0 0 0-.708l-4.5-4.5a.5.5 0 0 0-.708.708L11.293 3H4.5a.5.5 0 0 0 0 1h6.793l-3.646 3.646a.5.5 0 0 0 .708.708l4.5-4.5z"/>
-                    </svg>
-                  </button>
-                <div id="export" class="export-content">
-                  <a href="#" onclick="copyLatex('tree')">LaTeX</a>
-                </div>
+    <div id="accordion-container" style="display: none;">
+      <div class="panel">
+        <button class="panel-toggle">Kalkulácia veľkosti</button>
+        <div class="panel-content">
+          <div class="size-container">
+            <button class="exportbtn">Export</button>
+            <div id="export" class="export-content">
+                <a href="#" onclick="copyLatex('sizeLatex')">LaTeX</a>
             </div>
+              
+            <button id="sizeButton" class="cute-button" hidden>Ďalši krok</button>
+            <button class="fullscreen-button">⛶</button>
+            <div id="size" class="zoom-target"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <button class="panel-toggle">Kalkulácia počtu konštánt</button>
+        <div class="panel-content">
+          <div class="constants-container">
+            <button class="exportbtn">Export</button>
+            <div id="export" class="export-content">
+              <a href="#" onclick="copyLatex('conLatex')">LaTeX</a>
+            </div>
+            <button id="conButton" class="cute-button" hidden>Ďalši krok</button>
+            <button class="fullscreen-button">⛶</button>
+            <div id="constants"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <button class="panel-toggle">Kalkulácia hĺbky</button>
+        <div class="panel-content">
+          <div class="depth-container">
+            <button class="exportbtn">Export</button>
+            <div id="export" class="export-content">
+              <a href="#" onclick="copyLatex('depthLatex')">LaTeX</a>
+            </div>
+
+            <button id="depthButton" class="cute-button" hidden>Ďalši krok</button>
+            <button class="fullscreen-button">⛶</button>
+            <div id="depth"></div>
+
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <button class="panel-toggle">Syntaktický strom</button>
+        <div class="panel-content">
+          <div class="results-container">
+            <button class="exportbtn">Export</button>
+            <div id="export" class="export-content">
+              <a href="#" onclick="copyLatex('tree')">LaTeX</a>
+            </div>
+
             <button id="visualButton" class="cute-button" hidden>Ďalši krok</button>
             <button class="fullscreen-button">⛶</button>
             <div id="visualization"></div>
-            </div>
-            <div class="resizer vertical"></div>
-            <div class="evaluate-container">
-                Evaluácia termu
-                <div class="export-container">
-                    <button class="exportbtn">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrow-up-right-square" viewBox="0 0 16 16">
-                          <path d="M12.854 3.146a.5.5 0 0 0 0-.708l-4.5-4.5a.5.5 0 0 0-.708.708L11.293 3H4.5a.5.5 0 0 0 0 1h6.793l-3.646 3.646a.5.5 0 0 0 .708.708l4.5-4.5z"/>
-                        </svg>
-                      </button>
-                    <div id="export" class="export-content">
-                      <a href="#" onclick="copyLatex('evalLatex')">LaTeX</a>
-                    </div>
-                </div>
-                <button id="evalButton" class="cute-button" hidden>Ďalši krok</button>
-                <button class="fullscreen-button">⛶</button>
-                <div id="evaluate"></div>
-            </div>
-            <div class="resizer vertical"></div>
-            <div class="depth-container">
-                Kalkulácia hĺbky
-                <div class="export-container">
-                    <button class="exportbtn">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrow-up-right-square" viewBox="0 0 16 16">
-                          <path d="M12.854 3.146a.5.5 0 0 0 0-.708l-4.5-4.5a.5.5 0 0 0-.708.708L11.293 3H4.5a.5.5 0 0 0 0 1h6.793l-3.646 3.646a.5.5 0 0 0 .708.708l4.5-4.5z"/>
-                        </svg>
-                      </button>
-                    <div id="export" class="export-content">
-                      <a href="#" onclick="copyLatex('depthLatex')">LaTeX</a>
-                    </div>
-                </div>
-                <button id="depthButton" class="cute-button" hidden>Ďalši krok</button>
-                <button class="fullscreen-button">⛶</button>
-                <div id="depth"></div>
-            </div>
+          </div>
         </div>
+      </div>
+
+      <div class="panel">
+        <button class="panel-toggle">Evaluácia termu</button>
+        <div class="panel-content">
+          <div class="evaluate-container">
+            <button class="exportbtn">Export</button>
+            <div id="export" class="export-content">
+              <a href="#" onclick="copyLatex('evalLatex')">LaTeX</a>
+            </div>
+
+            <button id="evalButton" class="cute-button" hidden>Ďalši krok</button>
+            <button class="fullscreen-button">⛶</button>
+            <div id="evaluate"></div>
+
+          </div>
+        </div>
+      </div>
     </div>
 
 </body>
