@@ -91,44 +91,52 @@
 
           <div class="modal-body tab-content" id="tab3">
             <p><strong>Funkcia Con(t)</strong> vracia množinu konštánt obsiahnutých v terme <em>t</em>.</p>
-            <p>Con(true) = {true}</p>
-            <p>Con(false) = {false}</p>
-            <p>Con(0) = {0}</p>
-            <p>Con(succ t₁) = Con(t₁)</p>
-            <p>Con(pred t₁) = Con(t₁)</p>
-            <p>Con(iszero t₁) = Con(t₁)</p>
-            <p>Con(if t₁ then t₂ else t₃) = Con(t₁) ∪ Con(t₂) ∪ Con(t₃)</p>
+            <ul>
+              <li>Con(true) = {true}</li>
+              <li>Con(false) = {false}</li>
+              <li>Con(0) = {0}</li>
+              <li>Con(succ t₁) = Con(t₁)</li>
+              <li>Con(pred t₁) = Con(t₁)</li>
+              <li>Con(iszero t₁) = Con(t₁)</li>
+              <li>Con(if t₁ then t₂ else t₃) = Con(t₁) ∪ Con(t₂) ∪ Con(t₃)</li>
+            </ul>
 
             <p><strong>Funkcia Size(t)</strong> určuje veľkosť termu ako počet uzlov syntaktického stromu.</p>
-            <p>Size(true) = 1</p>
-            <p>Size(false) = 1</p>
-            <p>Size(0) = 1</p>
-            <p>Size(succ t₁) = Size(t₁) + 1</p>
-            <p>Size(pred t₁) = Size(t₁) + 1</p>
-            <p>Size(iszero t₁) = Size(t₁) + 1</p>
-            <p>Size(if t₁ then t₂ else t₃) = Size(t₁) + Size(t₂) + Size(t₃) + 1</p>
+            <ul>
+              <li>Size(true) = 1</li>
+              <li>Size(false) = 1</li>
+              <li>Size(0) = 1</li>
+              <li>Size(succ t₁) = Size(t₁) + 1</li>
+              <li>Size(pred t₁) = Size(t₁) + 1</li>
+              <li>Size(iszero t₁) = Size(t₁) + 1</li>
+              <li>Size(if t₁ then t₂ else t₃) = Size(t₁) + Size(t₂) + Size(t₃) + 1</li>
+            </ul>
 
             <p><strong>Funkcia depth(t)</strong> určuje hĺbku najdlhšej vetvy syntaktického stromu.</p>
-            <p>depth(true) = 1</p>
-            <p>depth(false) = 1</p>
-            <p>depth(0) = 1</p>
-            <p>depth(succ t₁) = depth(t₁) + 1</p>
-            <p>depth(pred t₁) = depth(t₁) + 1</p>
-            <p>depth(iszero t₁) = depth(t₁) + 1</p>
-            <p>depth(if t₁ then t₂ else t₃) = max(depth(t₁), depth(t₂), depth(t₃)) + 1</p>
+            <ul>
+              <li>depth(true) = 1</li>
+              <li>depth(false) = 1</li>
+              <li>depth(0) = 1</li>
+              <li>depth(succ t₁) = depth(t₁) + 1</li>
+              <li>depth(pred t₁) = depth(t₁) + 1</li>
+              <li>depth(iszero t₁) = depth(t₁) + 1</li>
+              <li>depth(if t₁ then t₂ else t₃) = max(depth(t₁), depth(t₂), depth(t₃)) + 1</li>
+            </ul>
           </div>
 
           <div class="modal-body tab-content" id="tab4">
             <p>Programy v jazyku NBL sú termy, ktoré sa dajú vyhodnotiť na hodnoty. Vyhodnotenie jednotlivých krokov sa označuje symbolom →.</p>
             <p>Význam termu je jeho výsledná hodnota (napr. <code>true</code>, <code>false</code>, <code>0</code>).</p>
             <p>Keďže NBL je netypovaný, môže obsahovať aj nesprávne termy ako <code>pred(false)</code>, ktoré síce sú syntakticky správne, no nie je ich možné vyhodnotiť. Zavedením typov by sa takéto prípady dali odhaliť vopred.</p>
-            <p><strong>Príklady vyhodnocovacích pravidiel:</strong></p>
-            <p><code>if true then t2 else t3 → t2</code></p>
-            <p><code>if false then t2 else t3 → t3</code></p>
-            <p><code>iszero 0 → true</code></p>
-            <p><code>iszero (succ nv) → false</code></p>
-            <p><code>pred (succ nv) → nv</code></p>
-            <p><code>pred 0 → 0</code></p>
+            <p><strong>Vyhodnocovacie pravidlá:</strong></p>
+            <ul>
+              <li><code>if true then t2 else t3 → t2</code></li>
+              <li><code>if false then t2 else t3 → t3</code></li>
+              <li><code>iszero 0 → true</code></li>
+              <li><code>iszero (succ nv) → false</code></li>
+              <li><code>pred (succ nv) → nv</code></li>
+              <li><code>pred 0 → 0</code></li>
+            </ul>
           </div>
 
           <div class="modal-body tab-content" id="tab5">
@@ -140,13 +148,15 @@
             </ul>
             <p>Typy sú priraďované termom počas prekladu pomocou typovej relácie, ktorá zabezpečuje jednoznačné určenie typu a odhalenie typových nezrovnalostí.</p>
             <p><strong>Typovacie pravidlá:</strong></p>
-            <p><code>true : Bool</code></p>
-            <p><code>false : Bool</code></p>
-            <p><code>0 : Nat</code></p>
-            <p><code>if t1 : Bool then t2 : T else t3 : T</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;- je typu <code>T</code></p>
-            <p><code>succ t1 : Nat</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;- ak <code>t1 : Nat</code></p>
-            <p><code>pred t1 : Nat</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;- ak <code>t1 : Nat</code></p>
-            <p><code>iszero t1 : Bool</code>&nbsp;&nbsp;&nbsp;&nbsp;- ak <code>t1 : Nat</code></p>
+            <ul>
+              <li><code>true : Bool</code></li>
+              <li><code>false : Bool</code></li>
+              <li><code>0 : Nat</code></li>
+              <li><code>if t1 : Bool then t2 : T else t3 : T : T</code></li>
+              <li><code>succ t1 : Nat</code> &nbsp;&nbsp;&nbsp;&nbsp;- ak <code>t1 : Nat</code></li>
+              <li><code>pred t1 : Nat</code> &nbsp;&nbsp;&nbsp;&nbsp;- ak <code>t1 : Nat</code></li>
+              <li><code>iszero t1 : Bool</code> &nbsp;&nbsp;&nbsp;&nbsp;- ak <code>t1 : Nat</code></li>
+            </ul>
             <p>Typová relácia sa overuje pomocou syntaktického stromu, kde každý uzol aplikuje príslušné pravidlo a ak sú všetky listy axiómy, term je správne typovaný.</p>
           </div>
         </div>
